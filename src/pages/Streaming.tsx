@@ -12,7 +12,7 @@ const Streaming = () => {
   return (
     <div className="min-h-screen bg-background py-24 px-4">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-5xl sm:text-6xl font-bold text-center mb-4 bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
+        <h1 className="text-5xl sm:text-6xl font-bold text-center mb-4 bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
           Live Streams
         </h1>
         <p className="text-center text-muted-foreground mb-12 text-lg">
@@ -30,7 +30,7 @@ const Streaming = () => {
             </TabsTrigger>
             <TabsTrigger 
               value="youtube"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground text-lg"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-lg"
             >
               <Youtube className="mr-2 h-5 w-5" />
               YouTube
@@ -65,7 +65,7 @@ const Streaming = () => {
           </TabsContent>
 
           <TabsContent value="youtube" className="mt-0">
-            <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-2xl hover:border-secondary/50 transition-colors duration-500">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-2xl hover:border-primary/50 transition-colors duration-500">
               <div className="aspect-video w-full">
                 <iframe
                   src={`https://www.youtube.com/embed/live_stream?channel=${youtubeChannelId}&autoplay=1`}

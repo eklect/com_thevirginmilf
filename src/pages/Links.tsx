@@ -64,9 +64,9 @@ const Links = () => {
           <img 
             src={logo} 
             alt="The Virgin Milf" 
-            className="w-32 h-auto mx-auto mb-6 drop-shadow-[0_0_30px_rgba(255,71,147,0.5)]" 
+            className="w-32 h-auto mx-auto mb-6 drop-shadow-[0_0_30px_rgba(255,0,0,0.5)]" 
           />
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
+          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
             Connect With Me
           </h1>
           <p className="text-muted-foreground text-lg">
@@ -86,7 +86,7 @@ const Links = () => {
                 rel="noopener noreferrer"
                 className="block group"
               >
-                <div className="bg-card border border-border rounded-xl p-6 hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_30px_rgba(255,71,147,0.2)] hover:scale-[1.02]">
+                <div className="bg-card border border-border rounded-xl p-6 hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_30px_rgba(255,0,0,0.2)] hover:scale-[1.02]">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <div className={`p-3 rounded-lg bg-gradient-to-br ${link.color} shadow-lg`}>
@@ -120,7 +120,7 @@ const Links = () => {
           <a href="mailto:contact@thevirginmilf.com">
             <Button 
               size="lg"
-              className="bg-gradient-to-r from-primary to-accent hover:shadow-[0_0_30px_rgba(255,71,147,0.6)] transition-all duration-300"
+              className="bg-gradient-to-r from-primary to-accent hover:shadow-[0_0_30px_rgba(255,0,0,0.6)] transition-all duration-300"
             >
               <Mail className="mr-2 h-5 w-5" />
               Get In Touch
