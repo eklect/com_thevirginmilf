@@ -8,6 +8,7 @@ const Navigation = () => {
 
   const navLinks = [
     { to: "/", label: "Home" },
+    { to: "/about", label: "About" },
     { to: "/streaming", label: "Streaming" },
     { to: "/links", label: "Links" },
   ];
