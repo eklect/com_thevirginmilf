@@ -34,25 +34,25 @@ const About = () => {
                   If any of your kids asks about MILFs, say it stands for:
                 </p>
                 
-                <div className="text-2xl md:text-3xl font-bold text-center space-y-2">
-                  <div className="flex items-center justify-center space-x-3">
+                <div className="text-2xl md:text-3xl font-bold space-y-2">
+                  <div className="flex items-center space-x-3">
                     <span className="text-primary text-4xl">M</span>
                     <span className="text-foreground">om</span>
                   </div>
-                  <div className="flex items-center justify-center space-x-3">
+                  <div className="flex items-center space-x-3">
                     <span className="text-primary text-4xl">I</span>
                   </div>
-                  <div className="flex items-center justify-center space-x-3">
+                  <div className="flex items-center space-x-3">
                     <span className="text-primary text-4xl">L</span>
                     <span className="text-foreground">ike</span>
                   </div>
-                  <div className="flex items-center justify-center space-x-3">
+                  <div className="flex items-center space-x-3">
                     <span className="text-primary text-4xl">F</span>
                     <span className="text-foreground">un!</span>
                   </div>
                 </div>
                 
-                <p className="text-center text-4xl mt-6">:D</p>
+                <p className="text-4xl mt-6">:D</p>
               </div>
             </div>
           </div>
