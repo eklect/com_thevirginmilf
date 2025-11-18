@@ -17,6 +17,10 @@ const gamesData: Record<string, any> = {
       { id: "vid2", title: "Epic Build Battle", thumbnail: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&h=225&fit=crop", videoId: "dQw4w9WgXcQ" },
       { id: "vid3", title: "Squad Wins Compilation", thumbnail: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&h=225&fit=crop", videoId: "dQw4w9WgXcQ" },
     ],
+    clans: [
+      { id: "clan1", name: "MILF Squad", role: "Owner", members: 25, description: "Family-friendly gaming community for parents" },
+      { id: "clan2", name: "Late Night Gamers", role: "Member", members: 150, description: "Gaming after the kids go to bed" },
+    ],
   },
   minecraft: {
     title: "Minecraft",
@@ -30,6 +34,11 @@ const gamesData: Record<string, any> = {
       { id: "vid2", title: "First Night Survival", thumbnail: "https://images.unsplash.com/photo-1604514628550-37477afdf4e3?w=400&h=225&fit=crop", videoId: "dQw4w9WgXcQ" },
       { id: "vid3", title: "Redstone Farm Tutorial", thumbnail: "https://images.unsplash.com/photo-1604514628550-37477afdf4e3?w=400&h=225&fit=crop", videoId: "dQw4w9WgXcQ" },
     ],
+    clans: [
+      { id: "clan1", name: "Block Builders United", role: "Owner", members: 45, description: "Creative builders who love to collaborate" },
+      { id: "clan2", name: "Mom's Mining Crew", role: "Co-Owner", members: 30, description: "Parent gamers mining together" },
+      { id: "clan3", name: "Redstone Engineers", role: "Member", members: 200, description: "Advanced redstone mechanics community" },
+    ],
   },
   "animal-crossing": {
     title: "Animal Crossing",
@@ -41,6 +50,9 @@ const gamesData: Record<string, any> = {
     highlights: [
       { id: "vid1", title: "Island Tour", thumbnail: "https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?w=400&h=225&fit=crop", videoId: "dQw4w9WgXcQ" },
       { id: "vid2", title: "Dream House Reveal", thumbnail: "https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?w=400&h=225&fit=crop", videoId: "dQw4w9WgXcQ" },
+    ],
+    clans: [
+      { id: "clan1", name: "Cozy Island Collective", role: "Member", members: 60, description: "Relaxed players sharing island designs" },
     ],
   },
 };
@@ -146,7 +158,7 @@ const GameDetails = () => {
           </Card>
 
           {/* Video Highlights Section */}
-          <div>
+          <div className="mb-12">
             <h2 className="text-3xl font-bold text-foreground mb-6">Video Highlights</h2>
             <div className="grid md:grid-cols-3 gap-6">
               {game.highlights.map((video: any) => (
@@ -177,6 +189,29 @@ const GameDetails = () => {
                     </CardContent>
                   </Card>
                 </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Clans & Clubs Section */}
+          <div>
+            <h2 className="text-3xl font-bold text-foreground mb-6">Gaming Clans & Clubs</h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {game.clans.map((clan: any) => (
+                <Card key={clan.id} className="border-border hover:border-primary/50 transition-all duration-300">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <h3 className="text-xl font-bold text-foreground">{clan.name}</h3>
+                      <span className="px-3 py-1 bg-primary/10 text-primary text-sm font-semibold rounded-full">
+                        {clan.role}
+                      </span>
+                    </div>
+                    <p className="text-foreground/70 mb-4">{clan.description}</p>
+                    <div className="flex items-center text-sm text-foreground/60">
+                      <span>{clan.members} members</span>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>
