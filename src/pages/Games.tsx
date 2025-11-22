@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { Play, Star } from "lucide-react";
-
+import axios from "axios";
 // Mock game data
 const featuredGame = {
   id: "fortnite",
