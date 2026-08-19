@@ -1,73 +1,30 @@
-# Welcome to your Lovable project
+# com_thevirginmilf
 
-## Project info
+**The Virgin MILF** — the streamer brand site at `thevirginmilf.com`. Games, streaming and
+links.
 
-**URL**: https://lovable.dev/projects/dbbc815d-4097-4f6e-a526-4db3fffc54e1
+One repo, two halves, like every Mucci & Co product:
 
-## How can I edit this code?
+| Folder | What it is | State |
+|---|---|---|
+| [`client/`](client) | React 18 + Vite + Tailwind + shadcn/ui, built to static files | Working — this is the whole site today |
+| [`server/`](server) | The API that will hold MAP's tokens | **Stub** — see [`server/README.md`](server/README.md) |
 
-There are several ways of editing your application.
+## Running
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/dbbc815d-4097-4f6e-a526-4db3fffc54e1) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+cd client
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+This site is **not in the dev box manifest** yet, so there is no `thevirginmilf.test` and
+no nginx in front of it. It runs on Vite's dev server alone. That changes when `server/`
+is real — see the stub's README for the order of operations.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Sign-in
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/dbbc815d-4097-4f6e-a526-4db3fffc54e1) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+There is none yet, and when there is it goes through **MAP** (`com_mucciandco_map`), the
+Mucci & Co identity provider every venture authenticates against. No local user table, no
+second identity provider. Every venture gets login/signup eventually — streamer sites
+included — which is why `server/` is scaffolded as a placeholder rather than left out.
