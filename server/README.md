@@ -22,7 +22,7 @@ so a frontend-only site cannot sign anyone in no matter how the login page looks
    redirect URIs. Part 2 of MAP's README is the checklist.
 2. Scaffold Nest here, holding MAP's tokens server-side and setting an httpOnly session
    cookie for the browser.
-3. Give the site a `sites.json` entry in `muccico_dev_box` — a `static` role for
+3. Give the site a `sites.json` entry in `muccico_ecosystem` — a `static` role for
    `client/` and a `nestjs` role for this folder at `base_path: /api`. **Ports 3001–3005
    are taken**; 3006 is the next free one, but check the manifest rather than trusting
    this line.
