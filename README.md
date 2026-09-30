@@ -14,8 +14,10 @@ One repo, two halves:
 Rebuilt from scratch in September 2026. The previous React client is gone; the only things
 carried over from it are the logo and the six social links.
 
-**Status: In-Development.** It runs in the dev box and is not deployed. The domain is live
-on the old static host until somebody moves it.
+**Status: deployed, not yet launched.** It runs in the dev box and, since 2026-09-30, on the
+production server at <https://thevirginmilf.com>, with DNS pointed there. Production has the
+seeded pages and channels and nothing else: no streams, no games and no admin until the steps
+under [First run](#first-run-in-order) are done there.
 
 ---
 
@@ -64,6 +66,8 @@ For hot reload instead: `cd server && npm run start:dev` and `cd client && npm r
 (<http://localhost:5173>, which is a registered MAP callback origin).
 
 ### First run, in order
+
+The same three steps in the dev box and in production.
 
 1. **Make yourself an admin.** Admins are MAP admins. In the MAP portal:
    Applications → The Virgin MILF → Members, or be a global admin. There is no way to do it
@@ -219,10 +223,17 @@ Icons are generated: `node brand/scripts/node/gen_pwa_icons.mjs thevirginmilf` i
 
 ---
 
+## Production
+
+`thevirginmilf` in `muccico_ecosystem/prod/config/sites.json`: uids 10022 / 10023, port 3012,
+1.5 GB (the client's type-check ran out of heap at the default 768 MB). Ship a change with
+`git push origin master`, then on the server `sudo muccico deploy thevirginmilf`.
+
+Its `.env` is `/srv/muccico/env/thevirginmilf_api/.env`. `PUSH_ENABLED=true` with its own
+VAPID pair — leave that pair alone. `MAIL_ENABLED=false`.
+
 ## Not done
 
-- **Production.** The prod manifest entry and generated files exist in `muccico_ecosystem`;
-  nothing is deployed.
 - **Real email.** `MAIL_ENABLED=false`. Turning it on needs a SendGrid key and domain
   authentication for `thevirginmilf.com`.
 - **A YouTube live embed.** It needs the channel **ID** (starts `UC`), entered as the YouTube
