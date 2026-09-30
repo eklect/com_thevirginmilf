@@ -1,0 +1,15 @@
+{
+  "_comment": "Read only when STEAM_MODE=fixture. Real Steam app ids, so the store-details half of the sync runs against the real store; the playtimes are invented. 1840 is Source Filmmaker and 431960 is Wallpaper Engine - software the store reports as type 'game', here to prove the genre check in SteamService hides them on arrival.",
+  "games": [
+    { "appid": 413150, "name": "Stardew Valley", "playtime_forever": 8130, "playtime_2weeks": 412, "rtime_last_played": 1790500000 },
+    { "appid": 620, "name": "Portal 2", "playtime_forever": 1260, "playtime_2weeks": 0, "rtime_last_played": 1785000000 },
+    { "appid": 1145360, "name": "Hades", "playtime_forever": 4020, "playtime_2weeks": 95, "rtime_last_played": 1790300000 },
+    { "appid": 105600, "name": "Terraria", "playtime_forever": 2710, "playtime_2weeks": 0, "rtime_last_played": 1779000000 },
+    { "appid": 367520, "name": "Hollow Knight", "playtime_forever": 660, "playtime_2weeks": 0, "rtime_last_played": 1771000000 },
+    { "appid": 504230, "name": "Celeste", "playtime_forever": 95, "playtime_2weeks": 0, "rtime_last_played": 1768000000 },
+    { "appid": 1794680, "name": "Vampire Survivors", "playtime_forever": 1890, "playtime_2weeks": 230, "rtime_last_played": 1790450000 },
+    { "appid": 632360, "name": "Risk of Rain 2", "playtime_forever": 0, "playtime_2weeks": 0 },
+    { "appid": 1840, "name": "Source Filmmaker", "playtime_forever": 12, "playtime_2weeks": 0, "rtime_last_played": 1760000000 },
+    { "appid": 431960, "name": "Wallpaper Engine", "playtime_forever": 5400, "playtime_2weeks": 600, "rtime_last_played": 1790500000 }
+  ]
+}

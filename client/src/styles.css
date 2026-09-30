@@ -1,0 +1,716 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * thevirginmilf.com — lipstick, leather and stripes, on Tailwind v4.
+ *
+ * ## How this file is put together
+ *
+ * Three layers, and the order matters:
+ *
+ *  1. `:root` — the design tokens. The estate's token NAMES (MAP's), carrying
+ *     this site's values: lipstick red, black, white. Every colour lives in
+ *     these custom properties, never in a Tailwind config.
+ *  2. `@theme inline` — points Tailwind's utilities at those properties.
+ *  3. Component classes — the handful of things a utility list would only make
+ *     less readable.
+ *
+ * ## The look
+ *
+ * Bold nineties fashion: a red leather jacket, a black-and-white striped skirt,
+ * red heels. So — three colours and no more, heavy condensed capitals, hard
+ * black edges, and shadows that are a solid offset block rather than a blur.
+ * The estate's other sites are hairline-and-serif editorial; this one is a
+ * magazine cover. What it shares with them is the STRUCTURE below — the three
+ * layers, `@theme inline`, the square corners — which is the estate's frontend
+ * standard and must not drift.
+ *
+ * ## Why `@theme inline` and not `@theme`
+ *
+ * `inline` makes Tailwind emit `background-color: var(--color-bg)` and resolve
+ * the variable AT RUNTIME. Plain `@theme` resolves it at build time and bakes
+ * the light palette into every utility — at which point the theme toggle still
+ * changes `data-theme`, the hand-written rules below still respond, and every
+ * Tailwind-styled element silently does not. It looks like a toggle bug and is
+ * not one. Always `inline`.
+ *
+ * The happy consequence: because the custom properties re-declare themselves
+ * per theme, `bg-surface` follows the theme on its own. Brand colours need no
+ * `dark:` prefix anywhere.
+ *
+ * Light is the default. Dark is a choice, not an OS inheritance.
+ */
+
+/* ───────────────────────── 1. The tokens ───────────────────────── */
+
+/*
+ *   red    #d2111d  the lipstick — buttons, the brand slab, the rule under a link
+ *   black  #0a0a0a  the type, every hard edge
+ *   white  #ffffff  the page
+ *
+ * Two reds, because one cannot do both jobs. `--accent` is the FILL: white
+ * text on it clears 5.6:1. As TEXT on white it is fine too, but on the dark
+ * theme's near-black it drops to 4:1 — so red WORDS use `--accent-ink`, which
+ * is darkened on light and lifted on dark to stay readable on either ground.
+ * Reach for `text-accent-ink` the moment a red word has to be read.
+ *
+ * `--danger` is deliberately NOT the brand red. On a site where red means
+ * "this is ours", an error in the same red reads as decoration; it gets a
+ * wine that sits apart from the lipstick.
+ */
+
+:root {
+  color-scheme: light;
+
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-alt: #f3f0f0;
+  --ink: #0a0a0a;
+  --text: #0a0a0a;
+  --muted: #5f585a;
+
+  /* `--border` is the quiet line between table rows; `--rule` is the hard
+     black edge the look is built from. */
+  --border: #d8d2d3;
+  --rule: #0a0a0a;
+
+  --accent: #d2111d;
+  --accent-text: #ffffff;
+  --accent-ink: #b00d17;
+  --danger: #7a1033;
+  --ok-bg: #e6f4ea;
+  --ok-text: #14532d;
+  --warn-bg: #fff3d1;
+  --warn-text: #7a4b00;
+
+  /* The brand slab — lipstick red in BOTH themes, so the hero and the
+     sign-in panel stay on brand instead of inverting with the page. */
+  --brand: #d2111d;
+  --brand-deep: #9a0912;
+  --brand-text: #ffffff;
+
+  /* The offset block under a card or a button. Black on white; on the dark
+     theme a black block on a black page is nothing at all, so it turns red. */
+  --shadow-ink: #0a0a0a;
+
+  --radius: 0;
+
+  /* The wordmark and every headline: the closest free cut to the logo's
+     condensed black grotesque. One static weight, no variable axes. */
+  --font-display: "Anton", "Haettenschweiler", "Impact", "Arial Narrow Bold",
+    "Helvetica Neue Condensed Bold", sans-serif;
+  /* Labels, navigation, buttons — a grotesque with real weight to it. */
+  --font-head: "Archivo", "Helvetica Neue", Helvetica, Arial, ui-sans-serif,
+    system-ui, sans-serif;
+  /* Reading and forms. */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue",
+    Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --tracking: 0.14em;
+  --measure: 68ch;
+}
+
+/*
+ * Dark: the same three colours with black and white trading places. The red
+ * fill is lifted a touch so white text on it still clears 4.8:1 against a
+ * ground that makes everything look dimmer.
+ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0c0c0d;
+  --surface: #151517;
+  --surface-alt: #202023;
+  --ink: #f6f3f3;
+  --text: #f6f3f3;
+  --muted: #a8a0a2;
+
+  --border: #323236;
+  --rule: #f6f3f3;
+
+  --accent: #e11d2b;
+  --accent-text: #ffffff;
+  --accent-ink: #ff6470;
+  --danger: #ff9bb5;
+  --ok-bg: #12291a;
+  --ok-text: #9fe0b3;
+  --warn-bg: #2e2406;
+  --warn-text: #f3cf7a;
+
+  --brand: #d2111d;
+  --brand-deep: #9a0912;
+  --brand-text: #ffffff;
+
+  --shadow-ink: #e11d2b;
+}
+
+/* ──────────────────── 2. The bridge into Tailwind ──────────────────── */
+
+@theme inline {
+  /* House names — what this app's own markup uses. */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-ink: var(--ink);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-rule: var(--rule);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-accent-ink: var(--accent-ink);
+  --color-danger: var(--danger);
+  --color-ok-bg: var(--ok-bg);
+  --color-ok-text: var(--ok-text);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-text: var(--warn-text);
+
+  /* The brand notes. */
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-text: var(--brand-text);
+  --color-shadow-ink: var(--shadow-ink);
+
+  /*
+   * shadcn-vue's names, aliased onto the same tokens.
+   *
+   * Its components ship referencing `bg-background`, `text-foreground`,
+   * `border-border`, `text-muted-foreground`, `bg-primary`. `shadcn-vue init`
+   * writes its own oklch palette under these names; that block is REPLACED by
+   * these aliases, so an added component inherits the house rather than
+   * shadcn's default neutral. Do this before adding any component or the app
+   * ends up running two palettes at once.
+   */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-text);
+  --color-secondary: var(--surface-alt);
+  --color-secondary-foreground: var(--text);
+  --color-muted-foreground: var(--muted);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--accent-text);
+  --color-input: var(--border);
+  --color-ring: var(--accent);
+
+  /*
+   * shadcn's `accent` is its SUBTLE hover wash, not the house's strong accent,
+   * and `accent-foreground` is the text on it — the two names collide. Its
+   * ghost and outline variants read `hover:bg-accent hover:text-accent-foreground`,
+   * so without this pair the second half resolves to nothing and a hover paints
+   * black on red. Aliasing it to the house accent keeps those variants legible;
+   * house markup uses `accent-text`, which is the same colour.
+   */
+  --color-accent-foreground: var(--accent-text);
+
+  --font-display: var(--font-display);
+  --font-head: var(--font-head);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  /*
+   * Square, always — the whole scale, not the few sizes in use today.
+   *
+   * The look is hard edges, and a shadcn component added next month will reach
+   * for whichever step it likes. Zeroing the scale makes `rounded-*` a no-op
+   * rather than something to remember to strip; `.rounded-full` is the
+   * deliberate exception (it is not on this scale) and stays round on the
+   * switch and the calendar's "today" dot, where a square would read as broken.
+   */
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+}
+
+/*
+ * The `dark:` variant, keyed to the attribute the toggle sets.
+ *
+ * Defining it this way overrides Tailwind's default `prefers-color-scheme`
+ * behaviour completely. That is correct here — light is a deliberate default
+ * rather than an OS inheritance, and brand colours never route through `dark:`
+ * anyway because the tokens above re-declare themselves. Reach for a token
+ * before reaching for this.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ────────────────────── 3. Base and components ────────────────────── */
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-bg text-text font-sans antialiased;
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.6;
+    /* `clip` rather than `hidden`: `hidden` on an ancestor silently breaks
+       `position: sticky`, and the masthead is sticky. */
+    overflow-x: clip;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Tailwind Preflight unstyles these; here a link is underlined in lipstick. */
+  a {
+    @apply text-text underline decoration-accent decoration-2 underline-offset-4;
+    transition: color 120ms ease;
+  }
+  a:hover {
+    @apply text-accent-ink;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-text);
+  }
+}
+
+/*
+ * Everything set in the display face routes through here, so the face is
+ * tuned in one place. It is a `@utility` rather than a plain class so that the
+ * component rules below can `@apply` it AND markup can reach for it directly.
+ *
+ * This is where the estate's other sites carry `@utility didone`, which pins
+ * Bodoni Moda's `opsz` and `wght` axes. Anton has neither: it is one static
+ * weight, 400, and that weight is already black. So the two lines that matter
+ * here are the opposite of tuning an axis —
+ *
+ *  - `font-weight: 400` says the face's only weight out loud, so nothing
+ *    inherits a `bold` from a heading tag and asks for one that does not exist;
+ *  - `font-synthesis: none` stops the browser inventing that bold by smearing
+ *    the outlines, which on a face this heavy closes up every counter.
+ */
+@utility poster {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-synthesis: none;
+  text-transform: uppercase;
+  letter-spacing: 0.012em;
+}
+
+@layer components {
+  /* The small tracked capitals: labels, nav, table headers. */
+  .kicker {
+    @apply font-head text-[11px] font-bold uppercase text-muted;
+    letter-spacing: var(--tracking);
+  }
+
+  /*
+   * A headline. `leading-[0.95]`, tight on purpose: Anton is all capitals
+   * here, so there are no descenders to collide, and a loose stack of
+   * condensed capitals stops reading as one block.
+   */
+  .display {
+    @apply poster leading-[0.95];
+  }
+
+  .byline {
+    @apply font-head text-xs font-semibold uppercase text-muted;
+    letter-spacing: 0.1em;
+  }
+
+  .container-page {
+    @apply mx-auto w-full max-w-[1180px] px-5 sm:px-8;
+  }
+
+  /* The heavy black line above a section or under a heading. */
+  .masthead-rule {
+    @apply border-t-[3px] border-rule;
+  }
+
+  /* The quiet one, between things that are already inside a section. */
+  .rule-thin {
+    @apply border-t border-border;
+  }
+
+  /* ─────────────────────── The layout language ─────────────────────── */
+  /*
+   * The page is built from full-width horizontal BANDS. Each picks a ground —
+   * white, a warm tint, the red slab, or black — and holds its own contents to
+   * the page measure. The striped divider goes between two of them.
+   */
+
+  .band {
+    @apply w-full;
+  }
+  .band-alt {
+    background: var(--surface-alt);
+  }
+  /*
+   * The red slab. `--brand` and `--brand-text` deliberately do NOT invert with
+   * the theme (see the token block), so this band looks the same in both.
+   * The gradient is the leather: a highlight across the top third, a deeper
+   * red falling away below it.
+   */
+  .band-brand {
+    background:
+      linear-gradient(
+        168deg,
+        color-mix(in srgb, var(--brand) 86%, #ff6b6b) 0%,
+        var(--brand) 38%,
+        var(--brand-deep) 100%
+      );
+    color: var(--brand-text);
+  }
+  /* Black in both themes — the footer, and the strip under the hero. */
+  .band-ink {
+    background: #0a0a0a;
+    color: #ffffff;
+  }
+  /*
+   * Links here must INHERIT, not take the base `a` colour.
+   *
+   * The base rule paints anchors `text-text`, which on a fixed-colour ground
+   * is the wrong colour in one theme or the other — black on black in the
+   * footer, in light mode. Anything placed on a band that does not follow the
+   * theme has to opt out of the theme-following text colour.
+   */
+  .band-brand a,
+  .band-ink a {
+    color: inherit;
+    text-decoration-color: currentColor;
+  }
+  .band-brand a:hover,
+  .band-ink a:hover {
+    color: inherit;
+    opacity: 0.8;
+  }
+  .band-ink a {
+    text-decoration-color: var(--brand);
+  }
+  /* `.container-page`'s utilities written out: Tailwind v4 can only `@apply`
+     utilities, not another component class from this same layer. */
+  .band-inner {
+    @apply mx-auto w-full max-w-[1180px] px-5 py-14 sm:px-8 sm:py-20;
+  }
+
+  /*
+   * The skirt. Black and white in both themes — it is a print, not a surface,
+   * so it does not follow the page.
+   */
+  .stripes {
+    height: 22px;
+    background: repeating-linear-gradient(
+      90deg,
+      #0a0a0a 0 18px,
+      #ffffff 18px 36px
+    );
+    border-block: 3px solid #0a0a0a;
+  }
+
+  /*
+   * The masthead: a thin sticky bar with a hard black edge under it. Opaque,
+   * not frosted — the look has no blur anywhere, and a translucent bar over a
+   * red band turns pink.
+   */
+  .masthead-bar {
+    @apply sticky top-0 z-50 border-b-[3px] border-rule bg-bg;
+  }
+
+  /*
+   * The masthead's height, as a token: the scroll margin on a heading jumped
+   * to by hash has to clear it. The bar is `h-16` plus its 3px rule.
+   */
+  :root {
+    --masthead-h: 67px;
+  }
+
+  /* ───────────────────────── Buttons ───────────────────────── */
+  /*
+   * A solid rectangle with a hard black edge and an offset block under it.
+   * Hovering lifts it off the block; pressing drops it onto it. That is the
+   * whole interaction, and it is why the shadow is a solid offset and never a
+   * blur.
+   */
+  .btn {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 border-2 border-rule
+           bg-accent px-5 py-2.5 font-head text-xs font-extrabold uppercase text-accent-text
+           no-underline;
+    letter-spacing: var(--tracking);
+    box-shadow: 4px 4px 0 0 var(--shadow-ink);
+    transition:
+      transform 100ms ease,
+      box-shadow 100ms ease;
+  }
+  .btn:hover {
+    color: var(--accent-text);
+    transform: translate(-1px, -1px);
+    box-shadow: 5px 5px 0 0 var(--shadow-ink);
+  }
+  .btn:active {
+    transform: translate(3px, 3px);
+    box-shadow: 1px 1px 0 0 var(--shadow-ink);
+  }
+  .btn:disabled {
+    @apply cursor-not-allowed opacity-50;
+    transform: none;
+    box-shadow: 4px 4px 0 0 var(--shadow-ink);
+  }
+  /* The second button: black on the page's own ground. */
+  .btn-ink {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .btn-ink:hover {
+    color: var(--bg);
+  }
+  /* For the red slab and the black band, where a filled button would vanish. */
+  .btn-outline {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 border-2 px-5 py-2.5
+           font-head text-xs font-extrabold uppercase no-underline;
+    border-color: currentColor;
+    letter-spacing: var(--tracking);
+    background: transparent;
+    color: inherit;
+  }
+  .btn-outline:hover {
+    background: color-mix(in srgb, currentColor 14%, transparent);
+  }
+  /* The small one in a table row or a toolbar. */
+  .btn-sm {
+    @apply px-3 py-1.5 text-[11px];
+    box-shadow: 3px 3px 0 0 var(--shadow-ink);
+  }
+
+  /* ───────────────────────── Surfaces ───────────────────────── */
+
+  /* A framed panel: hard edge, offset block. The unit the public pages are
+     built from — a stream, a game, a link. */
+  .panel {
+    @apply border-2 border-rule bg-surface;
+    box-shadow: 6px 6px 0 0 var(--shadow-ink);
+  }
+  /* A panel that is a link: it lifts the way a button does. */
+  .panel-link {
+    @apply block text-text no-underline;
+    transition:
+      transform 120ms ease,
+      box-shadow 120ms ease;
+  }
+  .panel-link:hover {
+    color: var(--text);
+    transform: translate(-2px, -2px);
+    box-shadow: 8px 8px 0 0 var(--shadow-ink);
+  }
+
+  /* A label: platform, category, "Hidden". Square, like everything else. */
+  .chip {
+    @apply inline-flex items-center gap-1 border-2 border-rule bg-surface px-2 py-0.5
+           font-head text-[10px] font-extrabold uppercase text-text no-underline;
+    letter-spacing: 0.1em;
+  }
+  .chip-red {
+    @apply border-rule bg-accent text-accent-text;
+  }
+  .chip-ink {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  a.chip:hover,
+  button.chip:hover {
+    background: var(--ink);
+    color: var(--bg);
+  }
+
+  /*
+   * A section title with the heavy rule under it — the one consistent way of
+   * opening a section.
+   */
+  .section-head {
+    @apply flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b-[3px] border-rule pb-3;
+  }
+  .section-title {
+    @apply poster text-3xl leading-none sm:text-4xl;
+  }
+
+  /* Form controls on the public side. The admin's are lighter on purpose. */
+  .field {
+    @apply w-full border-2 border-rule bg-surface px-3 py-2 text-sm text-text;
+  }
+  .field:focus {
+    @apply outline-2 outline-offset-0 outline-accent;
+  }
+
+  /* The admin's form control: the same shape with the quiet border, because
+     a screen of twenty heavy black boxes is a wall. */
+  .input {
+    @apply w-full border border-border bg-surface px-3 py-2 text-sm text-text;
+  }
+  .input:focus {
+    @apply border-rule outline-2 outline-offset-0 outline-accent;
+  }
+
+  /* An inline message. */
+  .notice {
+    @apply border-2 border-rule bg-surface-alt px-4 py-3 text-sm;
+  }
+  .notice-error {
+    @apply border-2 border-danger px-4 py-3 text-sm text-danger;
+  }
+
+  /*
+   * The cover art of a game with no cover art: its title, large, on the red
+   * slab. Most Steam games have a header image; a delisted one and a
+   * hand-added one without an upload do not, and a grey rectangle there reads
+   * as a broken image rather than a game.
+   */
+  .cover-fallback {
+    @apply poster flex items-center justify-center px-4 text-center text-2xl leading-none;
+    background: var(--brand);
+    color: var(--brand-text);
+  }
+
+  /* ───────────────────────── Rendered Markdown ───────────────────────── */
+  /*
+   * A review, the About page, a stream's description — and the only place in
+   * the app where `v-html` is used at all. See `MarkdownBody.vue`.
+   *
+   * Hand-rolled rather than `@tailwindcss/typography`. That plugin would be
+   * the estate's first Tailwind plugin, it brings its own colour and spacing
+   * opinions that then have to be argued back down to these tokens, and what
+   * it buys is about forty lines. This is those forty lines.
+   *
+   * The selectors are element selectors because the HTML here is generated by
+   * markdown-it and carries no classes to hook.
+   */
+  .markdown-body {
+    @apply font-sans text-[16.5px] leading-[1.7];
+    max-width: var(--measure);
+  }
+  .markdown-body > * + * {
+    margin-top: 1.05em;
+  }
+  .markdown-body h2 {
+    @apply poster text-3xl leading-none;
+    margin-top: 1.7em;
+  }
+  .markdown-body h3 {
+    @apply font-head text-lg font-extrabold uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 1.5em;
+  }
+  .markdown-body h4 {
+    @apply font-head text-base font-bold;
+    margin-top: 1.3em;
+  }
+  /* Room above a heading when it is jumped to by hash: clear of the sticky
+     masthead, plus breathing space. */
+  .markdown-body h2,
+  .markdown-body h3,
+  .markdown-body :target {
+    scroll-margin-top: calc(var(--masthead-h) + 1.5rem);
+  }
+  .markdown-body strong {
+    @apply font-bold;
+  }
+  .markdown-body ul,
+  .markdown-body ol {
+    padding-left: 1.4em;
+  }
+  .markdown-body ul {
+    list-style: square;
+  }
+  .markdown-body ul > li::marker {
+    color: var(--accent);
+  }
+  .markdown-body ol {
+    list-style: decimal;
+  }
+  .markdown-body li + li {
+    margin-top: 0.35em;
+  }
+  .markdown-body blockquote {
+    @apply font-head text-lg font-semibold;
+    border-left: 6px solid var(--accent);
+    padding-left: 1em;
+  }
+  .markdown-body code {
+    @apply font-mono text-[0.88em];
+    background: var(--surface-alt);
+    padding: 0.1em 0.35em;
+  }
+  .markdown-body pre {
+    @apply font-mono text-[0.85em];
+    background: var(--surface-alt);
+    padding: 1em 1.1em;
+    overflow-x: auto;
+  }
+  /* The inline rule would double up inside a block. */
+  .markdown-body pre code {
+    background: none;
+    padding: 0;
+  }
+  .markdown-body hr {
+    border-top: 3px solid var(--rule);
+    margin: 2em 0;
+  }
+  .markdown-body img {
+    max-width: 100%;
+    height: auto;
+  }
+  .markdown-body table {
+    @apply w-full text-sm;
+    border-collapse: collapse;
+  }
+  .markdown-body th,
+  .markdown-body td {
+    border-bottom: 1px solid var(--border);
+    padding: 0.5em 0.6em;
+    text-align: left;
+  }
+  /* `.kicker`'s treatment, written out: Tailwind v4 can only `@apply`
+     utilities, not another component class defined in this same layer. */
+  .markdown-body th {
+    @apply font-head text-[11px] font-bold uppercase text-muted;
+    letter-spacing: var(--tracking);
+  }
+
+  /*
+   * Footnotes, as `markdown-it-footnote` emits them: a superscript mark in the
+   * text, and at the end of the body a rule, then an ordered list with a return
+   * arrow after each note.
+   */
+  .markdown-body .footnote-ref {
+    font-size: 0.72em;
+    line-height: 0;
+  }
+  .markdown-body .footnote-ref a {
+    @apply font-head text-muted no-underline;
+    padding: 0 0.1em;
+  }
+  .markdown-body .footnotes-sep {
+    margin-top: 3em;
+  }
+  .markdown-body .footnotes {
+    @apply text-muted;
+    font-size: 0.9em;
+  }
+  .markdown-body .footnotes-list {
+    padding-left: 1.4em;
+  }
+  .markdown-body .footnote-item > p {
+    margin-top: 0;
+  }
+  .markdown-body .footnote-backref {
+    @apply no-underline;
+    margin-left: 0.25em;
+  }
+}

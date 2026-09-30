@@ -3,22 +3,48 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>The Virgin Milf - Gaming & Streaming</title>
-    <meta name="description" content="Professional gamer and streamer bringing you epic gameplay and unforgettable moments. Watch live streams on Twitch and YouTube." />
-    <meta name="author" content="The Virgin Milf" />
+    <!-- One value, not a `prefers-color-scheme` pair: this site opens light
+         whatever the OS prefers (see public/theme.js), so a media-matched
+         theme-color would paint the browser chrome the wrong colour. -->
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="description" content="TheVirginMILF — Ali Mucci, new to video games and streaming every first time. The stream calendar, her game library and what she thought of it." />
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- iOS ignores the manifest for both of these: the icon comes from the
+         apple-touch-icon, the home-screen label from apple-mobile-web-app-title. -->
+    <link rel="apple-touch-icon" href="/icons/v1/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Virgin MILF" />
 
-    <meta property="og:title" content="The Virgin Milf - Gaming & Streaming" />
-    <meta property="og:description" content="Professional gamer and streamer bringing you epic gameplay and unforgettable moments. Watch live streams on Twitch and YouTube." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-
+    <meta property="og:title" content="The Virgin MILF" />
+    <meta property="og:description" content="Ali Mucci, new to video games and streaming every first time." />
+    <meta property="og:image" content="/brand/v1/logo.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-  </head>
+    <title>The Virgin MILF</title>
 
+    <!-- Blocking on purpose: it must set the theme before the first paint. -->
+    <script src="/theme.js"></script>
+
+    <!--
+      The face pairing: Anton for the wordmark and every headline — the closest
+      free cut to the logo's condensed black grotesque — Archivo for labels,
+      navigation and buttons, Inter for reading and forms. All progressive
+      enhancement: the token stacks in styles.css fall back to system faces.
+
+      Anton is one static weight (400) with no variable axes, so there is
+      nothing to pin here the way the estate's Bodoni Moda sites pin `opsz`.
+      Archivo is asked for as a WEIGHT RANGE, so styles.css can re-tune a
+      weight without anyone coming back here to add the instance it now wants.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..900&family=Inter:wght@400;500;600;700&display=swap"
+    />
+  </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

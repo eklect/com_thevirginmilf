@@ -1,30 +1,241 @@
-# com_thevirginmilf
+# com_thevirginmilf — The Virgin MILF
 
-**The Virgin MILF** — the streamer brand site at `thevirginmilf.com`. Games, streaming and
-links.
+`thevirginmilf.com` — Ali Mucci's streaming site. Her gamer tag is **TheVirginMILF**:
+*Virgin* because she is new to video games, *MILF* for **Mom is Living Fantastically** —
+and yes, the double entendre is the point.
 
-One repo, two halves, like every Mucci & Co product:
+One repo, two halves:
 
-| Folder | What it is | State |
+| | What | Stack |
 |---|---|---|
-| [`client/`](client) | React 18 + Vite + Tailwind + shadcn/ui, built to static files | Working — this is the whole site today |
-| [`server/`](server) | The API that will hold MAP's tokens | **Stub** — see [`server/README.md`](server/README.md) |
+| `client/` | The site and its `/admin` | Vue 3 + Vite + Pinia + Tailwind v4 + shadcn-vue |
+| `server/` | The API | NestJS 11 + TypeORM + MySQL 8, a MAP relying party |
 
-## Running
+Rebuilt from scratch in September 2026. The previous React client is gone; the only things
+carried over from it are the logo and the six social links.
+
+**Status: In-Development.** It runs in the dev box and is not deployed. The domain is live
+on the old static host until somebody moves it.
+
+---
+
+## What it does
+
+- **Stream calendar** — month / week / day, with the next streams listed under it. Admins
+  schedule a stream, pick the channels it is on (Twitch, YouTube, …), optionally a game.
+- **The watch link is for signed-in people.** Anyone sees the calendar; the link to the
+  stream shows once you have an account. See [The sign-in gate](#the-sign-in-gate).
+- **Stream alerts** — an announcement when a stream is published and a reminder shortly
+  before it starts, by **email** and by **browser push**. Each person switches the two
+  independently on their account page. See [Alerts](#alerts).
+- **Game library** — synced from her Steam account, plus games added by hand. Each can be
+  hidden, hearted, rated out of ten stars, put in categories, and reviewed.
+- **Game pages** — cover art, screenshots, the facts, her rating, her notes and her reviews.
+- **Favorites** — every game she hearted, then the most-played games from Steam.
+- **About, Links, Live** — Live embeds the Twitch player and chat.
+- **Accounts through MAP.** No users table, no passwords here.
+
+---
+
+## Run it
+
+It lives in the dev box (`muccico_ecosystem`) as the `thevirginmilf` site:
+
+| | |
+|---|---|
+| Site | <https://thevirginmilf.test> |
+| API | same origin, under `/api` → `127.0.0.1:3012` in the container |
+| Database | `thevirginmilf_api`, user `thevirginmilf_api_app` |
+| MAP application | `com-thevirginmilf` (registered from the manifest at container boot) |
 
 ```bash
-cd client
-npm install
-npm run dev
+# The API runs compiled. After changing server code:
+cd server && npm run build
+cd ~/development/muccico_ecosystem && docker compose exec app supervisorctl restart thevirginmilf_api
+
+# The client is served from dist/. After changing client code:
+cd client && npm run build:dev
 ```
 
-This site is **not in the dev box manifest** yet, so there is no `thevirginmilf.test` and
-no nginx in front of it. It runs on Vite's dev server alone. That changes when `server/`
-is real — see the stub's README for the order of operations.
+`supervisord` runs `node dist/main.js`, so a server change does nothing until it is built
+**and** restarted. Migrations run at boot (`migrationsRun: true`).
 
-## Sign-in
+For hot reload instead: `cd server && npm run start:dev` and `cd client && npm run dev`
+(<http://localhost:5173>, which is a registered MAP callback origin).
 
-There is none yet, and when there is it goes through **MAP** (`com_mucciandco_map`), the
-Mucci & Co identity provider every venture authenticates against. No local user table, no
-second identity provider. Every venture gets login/signup eventually — streamer sites
-included — which is why `server/` is scaffolded as a placeholder rather than left out.
+### First run, in order
+
+1. **Make yourself an admin.** Admins are MAP admins. In the MAP portal:
+   Applications → The Virgin MILF → Members, or be a global admin. There is no way to do it
+   from inside this site.
+2. **Connect Steam** at `/admin/steam`. You need a Steam Web API key
+   (<https://steamcommunity.com/dev/apikey>) and the profile's address, and the profile's
+   *Game details* privacy set to **Public** — without that Steam returns no game list.
+3. **Check the channels** at `/admin/channels`. The six seeded links came from the old site.
+
+### `server/.env`
+
+`.env.example` documents every variable. The dev box writes the `MYSQL_*` and `MAP_CLIENT_*`
+values itself. Set by hand, once:
+
+| Variable | |
+|---|---|
+| `SESSION_ENCRYPTION_SECRET` | `openssl rand -base64 48`. Also seals the stored Steam key — changing it signs everyone out **and** asks for Steam to be reconnected. |
+| `STORAGE_ROOT` | `/var/lib/muccico/storage/thevirginmilf_api` in the dev box. Must be outside the repo. |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `npx web-push generate-vapid-keys`. **Set once per environment and leave alone** — changing the pair orphans every browser's push subscription. |
+| `MAIL_ENABLED`, `PUSH_ENABLED` | `false` writes each message to the log and marks it `logged` instead of sending. |
+| `STEAM_MODE` | `fixture` swaps her library for `test/fixtures/steam/owned-games.json`. Development only. |
+
+---
+
+## The design, where it is not obvious
+
+### The sign-in gate
+
+`GET /api/site/streams*` is public. For a caller with no session the response **does not
+contain the links** — the `url` key is never written (`server/src/streams/streams.serializer.ts`).
+The client has nothing to hide; it shows "Sign in to get the link" when `linksLocked` is true.
+Those routes send `Cache-Control: private, no-store`.
+
+It is a nudge to sign up, not a secret: her channels are on the Links page. What is gated is
+*this stream's* link. A stream's **description is public**, so a link typed there is too — the
+admin form says so.
+
+Signing in from the dialog returns to `/streams/<id>`, the same stream, now with its links.
+
+### A game has two owners
+
+`games` is written by the Steam sync and by the admin, and they must never overwrite each
+other. So the columns are split: `steam_*`, `playtime_*` and `last_played_at` belong to the
+sync; `title`, `summary`, `description`, `cover_upload_id`, the flags and the rating belong to
+the admin. The site shows `admin ?? steam` (`games.serializer.ts`).
+
+In the admin, a Steam game's text fields start empty and show Steam's value as a placeholder.
+Typing overrides it; clearing it hands it back.
+
+The sync never deletes. A game that leaves her library is marked, and keeps its reviews.
+A manual game has no `steam_app_id`, so the sync cannot touch it. Steam games cannot be
+deleted, only hidden — the next sync would bring them back.
+
+Software arrives **hidden**: Steam reports Wallpaper Engine as `type: "game"`, so the check is
+on store genres (`looksLikeAGame` in `steam.service.ts`). One click shows anything it got wrong.
+
+### The Steam sync is a background job
+
+One Web API call for the library, then one store call per new game, spaced 1.5 seconds apart.
+`POST /admin/steam/sync` returns 202 and the screen polls. It also runs daily at 09:00 UTC.
+Images are hotlinked from the URLs Steam returns — stored as given, never built from an app id.
+
+The API key is stored sealed (`common/secret-box.ts`) and no endpoint returns it.
+
+### Favorites
+
+Hearted games first, then the top *N* Steam games by playtime (`favorites_auto_count`,
+default 10) that are not hidden, not hearted, and not flagged *keep it off "most played"*.
+A manual game has no playtime, so the heart is its only way on.
+
+### Alerts
+
+`server/src/notifications/stream-alerts.scheduler.ts`, every minute:
+
+- **Announcement** — once per stream, about **two minutes after its last edit**, so a typo can
+  be fixed before anyone is told.
+- **Reminder** — `reminder_lead_minutes` before the start (default 30). Moving a stream after
+  its reminder went sends a fresh one for the new time.
+- A stream published inside the reminder window gets the reminder only.
+- Past streams are never announced. A kind that is switched off is marked handled, so
+  switching it back on does not announce the backlog.
+- There is no "moved" or "cancelled" message.
+
+Two queues with the same protocol — `outbound_emails` (the estate's SendGrid module) and
+`outbound_pushes` — each with a unique `dedupe_key`, which is what makes a crash mid-send safe.
+
+Email goes to `subscribers` who opted in. Push goes to every row in `push_subscriptions`, one
+per browser. The signup form has an "Email me when she streams" box, ticked by default.
+
+Times in an alert are written in `alerts_timezone` (default `America/New_York`) and name the
+zone; the calendar on the site shows each visitor their own.
+
+### Push, and the one service worker in the estate
+
+The estate rule is "manifest only, no service worker". Web Push cannot work without one, so
+`client/public/sw.js` is the scoped exception: it handles `push`, `notificationclick` and
+`pushsubscriptionchange` and **nothing else** — no `fetch` handler, no caches, no Workbox. It
+cannot serve a stale page. Do not add caching to it.
+
+- Registered only from a click on the account page (`client/src/lib/push.ts`).
+- nginx serves `/sw.js` `no-cache` (an exact-match location in the static template).
+- The manifest is `display: standalone` with `display_override: ["minimal-ui"]`, because iOS
+  only delivers push to a site added to the Home Screen.
+- The server only delivers to the four browser vendors' push hosts. A subscription's endpoint
+  is a URL the browser supplies, and without that list any account could point the API at an
+  internal address.
+
+### The WAF reads field names
+
+Both environments sit behind the OWASP Core Rule Set. Rule 930120 refuses a JSON key called
+`profile` (it reads `.profile`, the shell dotfile) with a bare nginx 403 — which is why the
+Steam form's field is `steamProfile`. When an admin write returns 403 with no JSON body, the
+rule id is in `/var/log/modsec_audit/audit.log` in the container.
+
+Every prose-writing route is under `/admin/`, which is what the manifest's
+`markdown_content: true` exclusion covers.
+
+---
+
+## Layout
+
+```
+server/src/
+  auth/ common/ map-client/ register/   MAP relying party, guards, signup     (from com_alimucci)
+  settings/ site/ uploads/ subscribers/ settings, public read plane, images   (from com_alimucci)
+  mail/                                 SendGrid queue                        (from com_simplicourt)
+  channels/ streams/                    where she streams; the calendar
+  games/ categories/ reviews/ steam/    the library and the sync that feeds it
+  push/                                 Web Push subscriptions and their queue
+  notifications/                        the scheduler that turns a stream into alerts
+  admin/                                every write route, all @AdminOnly()
+client/src/
+  views/            public pages        views/admin/   the dashboard
+  components/calendar/                  the estate's shared calendar          (from com_mycotools_app)
+  lib/push.ts                           everything the browser does for push
+  styles.css                            tokens, @theme inline, component classes
+```
+
+The look — lipstick red, black, white, hard edges, the striped band — is all in
+`client/src/styles.css`. The display face is **Anton** (one static weight, no `opsz` axis);
+`@utility poster` is where the other sites have `didone`.
+
+### Brand files
+
+`client/public/brand/v1/logo.png` is the full lockup. `lips.png` is cut from it — the wordmark
+masked away, the drip kept — and is what the masthead, the favicon and the PWA icons use. The
+masthead sets the name in live type rather than showing the logo image, because the logo is
+black lettering on transparency and would vanish on the dark theme. The full logo appears once,
+on the home page, on a white plate in both themes.
+
+Icons are generated: `node brand/scripts/node/gen_pwa_icons.mjs thevirginmilf` in
+`muccico_devops`. The directory is versioned (`v1`) because nginx caches images for a year.
+
+---
+
+## Not done
+
+- **Production.** The prod manifest entry and generated files exist in `muccico_ecosystem`;
+  nothing is deployed.
+- **Real email.** `MAIL_ENABLED=false`. Turning it on needs a SendGrid key and domain
+  authentication for `thevirginmilf.com`.
+- **A YouTube live embed.** It needs the channel **ID** (starts `UC`), entered as the YouTube
+  channel's handle in `/admin/channels`. Until then YouTube is linked, not embedded.
+- **Tests.** None, as on the estate's other single-owner repos.
+
+## Starting the dev database over
+
+The schema and the seed are migrations, so an empty database rebuilds itself at boot:
+
+```bash
+cd ~/development/muccico_ecosystem
+docker compose exec app mysql --defaults-extra-file=/root/.mysql/root.cnf -e 'DROP DATABASE thevirginmilf_api'
+docker compose exec app mysql-provision-sites
+docker compose exec app supervisorctl restart thevirginmilf_api
+```
