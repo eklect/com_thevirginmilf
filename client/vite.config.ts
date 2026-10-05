@@ -1,7 +1,36 @@
 import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
+
+// Google's gtag.js snippet, injected into <head> only when the build mode's
+// env sets VITE_GA_MEASUREMENT_ID — today that is .env.production alone. No
+// router hook is needed for page views: GA4's enhanced measurement ("page
+// changes based on browser history events", on by default) picks up
+// vue-router's pushState navigations.
+function googleAnalytics(measurementId: string | undefined): Plugin {
+  return {
+    name: 'google-analytics',
+    transformIndexHtml() {
+      if (!measurementId) return [];
+      return [
+        {
+          tag: 'script',
+          attrs: { async: true, src: `https://www.googletagmanager.com/gtag/js?id=${measurementId}` },
+          injectTo: 'head',
+        },
+        {
+          tag: 'script',
+          children: `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${measurementId}');`,
+          injectTo: 'head',
+        },
+      ];
+    },
+  };
+}
 
 // Dev proxy keeps the browser same-origin with the API, mirroring nginx on the
 // dev box. Two modes:
@@ -16,10 +45,10 @@ import { defineConfig } from 'vite';
 //                    sign-in work.
 const viaDevBox = !!process.env.VIA_DEVBOX;
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   // Tailwind v4 is CSS-first: no tailwind.config.ts, no PostCSS, no
   // autoprefixer. The plugin reads the @theme block in src/styles.css.
-  plugins: [vue(), tailwindcss()],
+  plugins: [vue(), tailwindcss(), googleAnalytics(loadEnv(mode, process.cwd()).VITE_GA_MEASUREMENT_ID)],
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
@@ -45,4 +74,4 @@ export default defineConfig({
           },
     },
   },
-});
+}));
