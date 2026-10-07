@@ -1,0 +1,4 @@
+[submodule "server/email_templates"]
+	path = server/email_templates
+	url = git@github.com:eklect/muccico_email_templates.git
+	branch = master

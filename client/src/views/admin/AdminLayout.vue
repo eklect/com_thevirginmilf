@@ -12,6 +12,7 @@ const sections = [
   { to: '/admin/subscribers', label: 'Subscribers' },
   { to: '/admin/site', label: 'Site settings' },
   { to: '/admin/pages', label: 'Pages' },
+  { to: '/admin/api-access', label: 'API access' },
 ];
 </script>
 

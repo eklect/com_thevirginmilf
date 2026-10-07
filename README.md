@@ -250,3 +250,27 @@ docker compose exec app mysql --defaults-extra-file=/root/.mysql/root.cnf -e 'DR
 docker compose exec app mysql-provision-sites
 docker compose exec app supervisorctl restart thevirginmilf_api
 ```
+
+## API keys and the email-template service plane
+
+Two server modules every venture backend carries, copied from
+`com_simplicourt/server` (its README has the long version):
+
+- **`server/src/service-auth/`** — keys this site issues to other servers. An
+  admin creates one at `/admin/api-access` (the secret is shown once); the
+  holder exchanges it at `POST /api/service/oauth/token` (`client_credentials`)
+  for a 15-minute bearer token, and `ServiceTokenGuard` re-reads the key on
+  every call, so Revoke is immediate. Scopes: `email-templates:read`,
+  `email-templates:write`.
+- **`server/src/email-templates/`** — the files in `server/email_templates/`,
+  the `muccico_email_templates` submodule (`git submodule update --init` after
+  a plain clone). `/api/service/email-templates/*` lists, reads and writes
+  templates as `{ html, text }`, versions on overwrite, archives, restores and
+  takes images; `/api/email-images/<stem>` serves them publicly, extension-free.
+  `FileTemplateService.render(kind, vars)` sends from `live/<kind>.html` +
+  `.txt` when both exist (`welcome`, `stream_announced`, `stream_reminder`
+  here) and falls back to the TypeScript template otherwise.
+
+`VENTURE` in `server/src/common/venture.ts` is `com_thevirginmilf`. Production sets
+`EMAIL_TEMPLATES_GIT_SYNC=true` with the key from
+`muccico keys thevirginmilf/api --templates`; the dev box keeps it off.

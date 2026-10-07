@@ -136,6 +136,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'subscribers', component: () => import('./views/admin/Subscribers.vue') },
       { path: 'pages', component: () => import('./views/admin/Pages.vue') },
       { path: 'site', component: () => import('./views/admin/SiteSettings.vue') },
+      { path: 'api-access', component: () => import('./views/admin/ApiAccess.vue'), meta: { title: 'API access' } },
     ],
   },
 

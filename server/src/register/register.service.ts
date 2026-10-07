@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { FileTemplateService } from '../email-templates/file-template.service';
 import { MailQueueService } from '../mail/mail-queue.service';
 import { welcomeEmail } from '../mail/templates/welcome';
 import { MapClientService } from '../map-client/map-client.service';
@@ -28,6 +29,7 @@ export class RegisterService {
     private readonly mapClient: MapClientService,
     private readonly subscribers: SubscribersService,
     private readonly mailQueue: MailQueueService,
+    private readonly fileTemplates: FileTemplateService,
     private readonly settings: SettingsService,
     config: ConfigService,
   ) {
@@ -54,10 +56,23 @@ export class RegisterService {
         dedupeKey: `welcome:${user.id}`,
         userId: user.id,
         toEmail: dto.email,
-        email: welcomeEmail(
-          { name: siteName, homeUrl: this.siteUrl, accent: '#d2111d' },
-          { firstName: dto.firstName, streamsUrl: `${this.siteUrl}/streams`, emailAlerts },
-        ),
+        // The editable file in email_templates/<venture>/live wins when it
+        // exists; the TypeScript template is what ships until somebody edits.
+        email:
+          (await this.fileTemplates.render('welcome', {
+            firstName: dto.firstName,
+            streamsUrl: `${this.siteUrl}/streams`,
+            alertsLine: emailAlerts
+              ? 'You asked to hear about streams, so you will get an email when one is scheduled and another shortly before it starts.'
+              : 'Stream alerts are off for your account. You can switch them on from your account page at any time.',
+            brandName: siteName,
+            homeUrl: this.siteUrl,
+            logoUrl: null,
+          })) ??
+          welcomeEmail(
+            { name: siteName, homeUrl: this.siteUrl, accent: '#d2111d' },
+            { firstName: dto.firstName, streamsUrl: `${this.siteUrl}/streams`, emailAlerts },
+          ),
       });
     } catch {
       // A welcome that could not be queued is not worth a failed signup.

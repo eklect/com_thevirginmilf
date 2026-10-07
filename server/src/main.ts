@@ -4,8 +4,12 @@ import { AppModule } from './app.module';
 import { applyAppPipeline } from './common/validation';
 
 async function bootstrap() {
+  // `bodyParser: false`: the parsers are registered in applyAppPipeline with a
+  // 512 KB JSON limit (Nest's default keeps Express's 100 KB, which an HTML
+  // email template exceeds), matching ModSecurity's non-file body cap.
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: false,
+    bodyParser: false,
   });
 
   applyAppPipeline(app);

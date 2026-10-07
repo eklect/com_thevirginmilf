@@ -4,6 +4,7 @@ import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { gameTitle } from '../games/games.serializer';
+import { FileTemplateService } from '../email-templates/file-template.service';
 import { MailQueueService } from '../mail/mail-queue.service';
 import { MailConfig } from '../mail/mail.config';
 import { Brand } from '../mail/templates/layout';
@@ -107,6 +108,7 @@ export class StreamAlertsScheduler implements OnApplicationBootstrap {
     private readonly subscribers: SubscribersService,
     private readonly pushSubscriptions: PushSubscriptionsService,
     private readonly mailQueue: MailQueueService,
+    private readonly fileTemplates: FileTemplateService,
     private readonly pushQueue: PushQueueService,
     private readonly settings: SettingsService,
     private readonly mailConfig: MailConfig,
@@ -299,25 +301,44 @@ export class StreamAlertsScheduler implements OnApplicationBootstrap {
       eventUrl,
     };
 
+    const lead = options.lead ?? 'soon';
     const emails = await this.mailQueue.enqueue(
-      emailRecipients.map((subscriber) => {
-        const args: StreamAlertArgs = {
-          ...base,
-          unsubscribeUrl: `${this.siteUrl}/unsubscribe/${subscriber.unsubscribeToken}`,
-        };
-        return {
-          kind,
-          dedupeKey: `${kind}:${options.dedupeScope}:${subscriber.id}`,
-          userId: subscriber.userId,
-          toEmail: subscriber.email,
-          fromAddress: this.fromAddress(context.fromName),
-          email:
-            kind === 'stream_reminder'
-              ? streamReminderEmail(brand, { ...args, lead: options.lead ?? 'soon' })
-              : streamAnnouncedEmail(brand, args),
-          headers: unsubscribeHeaders(this.siteUrl, subscriber),
-        };
-      }),
+      await Promise.all(
+        emailRecipients.map(async (subscriber) => {
+          const args: StreamAlertArgs = {
+            ...base,
+            unsubscribeUrl: `${this.siteUrl}/unsubscribe/${subscriber.unsubscribeToken}`,
+          };
+          // The editable file in email_templates/<venture>/live wins when it
+          // exists; the TypeScript template is what ships until somebody edits.
+          const fromFile = await this.fileTemplates.render(kind, {
+            streamerName: base.streamerName,
+            title: base.title,
+            when: base.when,
+            gameLine: base.gameTitle ? `Playing ${base.gameTitle}.` : '',
+            whereLine: whereLine(base.channels),
+            eventUrl: base.eventUrl,
+            unsubscribeUrl: args.unsubscribeUrl,
+            lead,
+            brandName: brand.name,
+            homeUrl: brand.homeUrl,
+            logoUrl: brand.logoUrl ?? null,
+          });
+          return {
+            kind,
+            dedupeKey: `${kind}:${options.dedupeScope}:${subscriber.id}`,
+            userId: subscriber.userId,
+            toEmail: subscriber.email,
+            fromAddress: this.fromAddress(context.fromName),
+            email:
+              fromFile ??
+              (kind === 'stream_reminder'
+                ? streamReminderEmail(brand, { ...args, lead })
+                : streamAnnouncedEmail(brand, args)),
+            headers: unsubscribeHeaders(this.siteUrl, subscriber),
+          };
+        }),
+      ),
     );
 
     const pushes = await this.pushQueue.enqueue(
@@ -409,4 +430,11 @@ function unsubscribeHeaders(siteUrl: string, subscriber: SubscriberEntity): Reco
     'List-Unsubscribe': `<${siteUrl}/api/unsubscribe/${subscriber.unsubscribeToken}>`,
     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
   };
+}
+
+/** The "Watch on …" sentence `stream-alerts.ts` builds, for the file template. */
+function whereLine(channels: string[]): string {
+  if (!channels.length) return '';
+  if (channels.length === 1) return `Watch on ${channels[0]}.`;
+  return `Watch on ${channels.slice(0, -1).join(', ')} or ${channels[channels.length - 1]}.`;
 }

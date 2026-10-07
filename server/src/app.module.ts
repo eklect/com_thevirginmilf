@@ -23,6 +23,8 @@ import { SteamModule } from './steam/steam.module';
 import { StreamsModule } from './streams/streams.module';
 import { SubscribersModule } from './subscribers/subscribers.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { ServiceAuthModule } from './service-auth/service-auth.module';
+import { EmailTemplatesModule } from './email-templates/email-templates.module';
 
 @Module({
   imports: [
@@ -64,6 +66,11 @@ import { UploadsModule } from './uploads/uploads.module';
     RegisterModule,
     AdminModule,
     NotificationsModule,
+
+    // API keys for other servers (/admin/api-access, /service/oauth/token) and
+    // the email-template service plane the My Company Tools app edits through.
+    ServiceAuthModule,
+    EmailTemplatesModule,
   ],
   controllers: [HealthController],
 })
