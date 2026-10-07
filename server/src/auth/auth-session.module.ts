@@ -3,10 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthConfig } from './auth.config';
 import { AuthController } from './auth.controller';
+import { AuthFlowService } from './auth-flow.service';
 import { AuthSessionEntity } from './auth-session.entity';
 import { AuthSessionService } from './auth-session.service';
 import { MapOAuthClient } from './map-oauth.client';
 import { MapTokenVerifier } from './map-token-verifier';
+import { RegisterModule } from '../register/register.module';
 
 /**
  * The relying-party half of MAP: configuration, the OAuth client, the token
@@ -18,7 +20,11 @@ import { MapTokenVerifier } from './map-token-verifier';
  */
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature([AuthSessionEntity])],
+  // RegisterModule: the callback finishes a signup started with a provider
+  // button, which is the register service's job. The other direction — the
+  // register controller starting the flow — goes through this module's global
+  // exports, so there is no cycle to declare.
+  imports: [TypeOrmModule.forFeature([AuthSessionEntity]), RegisterModule],
   controllers: [AuthController],
   providers: [
     {
@@ -33,7 +39,14 @@ import { MapTokenVerifier } from './map-token-verifier';
       useFactory: (config: AuthConfig) => new MapTokenVerifier(config),
     },
     AuthSessionService,
+    AuthFlowService,
   ],
-  exports: [AuthConfig, MapOAuthClient, MapTokenVerifier, AuthSessionService],
+  exports: [
+    AuthConfig,
+    MapOAuthClient,
+    MapTokenVerifier,
+    AuthSessionService,
+    AuthFlowService,
+  ],
 })
 export class AuthSessionModule {}

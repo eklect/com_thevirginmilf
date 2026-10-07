@@ -8,6 +8,7 @@ import { open, seal } from '../common/secret-box';
 import { AuthConfig } from './auth.config';
 import { AuthSessionEntity } from './auth-session.entity';
 import { MapOAuthClient, type MapTokens } from './map-oauth.client';
+import type { PendingSignup } from '../register/pending-signup';
 
 /** Refresh this far ahead of expiry, so a slow request never races the clock. */
 const REFRESH_SKEW_MS = 60_000;
@@ -294,8 +295,7 @@ export class AuthSessionService {
 
   readTransaction(request: Request): OAuthTransaction | null {
     const raw = request.cookies?.[this.config.transactionCookieName] as
-      | string
-      | undefined;
+      string | undefined;
     if (!raw) return null;
 
     try {
@@ -343,6 +343,12 @@ export interface OAuthTransaction {
   codeVerifier: string;
   redirectUri: string;
   returnTo: string;
+  /**
+   * A signup started with a provider button: the form's fields, minus the
+   * password, waiting for MAP to create the identity. The callback runs the
+   * venture's own onboarding from them. Absent on a plain sign-in.
+   */
+  pendingSignup?: PendingSignup;
 }
 
 function hash(value: string): string {

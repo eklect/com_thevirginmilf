@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthConfig } from './auth.config';
+import type { ProviderInfo } from './social-providers';
 
 /** What `/oauth/token` answers with, for both grants. */
 export interface MapTokens {
@@ -40,6 +41,7 @@ export interface MapTokens {
 @Injectable()
 export class MapOAuthClient {
   private readonly logger = new Logger(MapOAuthClient.name);
+  private providersCache: { at: number; list: ProviderInfo[] } | null = null;
 
   constructor(private readonly config: AuthConfig) {}
 
@@ -58,6 +60,60 @@ export class MapOAuthClient {
     url.searchParams.set('code_challenge', params.codeChallenge);
     url.searchParams.set('code_challenge_method', 'S256');
     return url.toString();
+  }
+
+  /**
+   * Step 1, starting at an upstream provider instead of MAP's own sign-in page.
+   *
+   * MAP's `/api/auth/social/<key>` takes the SAME authorize URL as `return_to` —
+   * as a same-origin path, so the origin is stripped — signs the person in
+   * through the provider, and then continues to `/oauth/authorize`, which hands
+   * the callback a code exactly as a password sign-in would. `terms_accepted=1`
+   * says this site's signup form had its Terms box ticked; `onboarding=venture`
+   * says this site runs its own onboarding and will send the welcome, so MAP
+   * sends none. See MAP's README, "Social sign-in".
+   */
+  socialStartUrl(
+    provider: string,
+    authorizeUrl: string,
+    options: { termsAccepted: boolean; venture: boolean },
+  ): string {
+    const authorize = new URL(authorizeUrl);
+    const url = new URL(`${this.config.issuerUrl}/api/auth/social/${provider}`);
+    url.searchParams.set(
+      'return_to',
+      `${authorize.pathname}${authorize.search}`,
+    );
+    if (options.termsAccepted) url.searchParams.set('terms_accepted', '1');
+    if (options.venture) url.searchParams.set('onboarding', 'venture');
+    return url.toString();
+  }
+
+  /**
+   * Which providers MAP has credentials for, so the sign-in and signup pages
+   * draw the right buttons. Public at MAP; cached here for five minutes so a
+   * page load is not a round trip. Unreachable means no buttons, not an error.
+   */
+  async providers(): Promise<ProviderInfo[]> {
+    const now = Date.now();
+    if (this.providersCache && now - this.providersCache.at < 5 * 60_000) {
+      return this.providersCache.list;
+    }
+    try {
+      const response = await fetch(
+        `${this.config.internalUrl}/api/auth/providers`,
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body = (await response.json()) as { providers?: ProviderInfo[] };
+      const list = Array.isArray(body.providers) ? body.providers : [];
+      this.providersCache = { at: now, list };
+      return list;
+    } catch (error) {
+      this.logger.warn(
+        `Could not list MAP's sign-in providers: ${String(error)}`,
+      );
+      return this.providersCache?.list ?? [];
+    }
   }
 
   /** Step 2 — redeem the code. Single use, 60-second lifetime. */
@@ -97,15 +153,18 @@ export class MapOAuthClient {
    */
   async introspect(accessToken: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.config.internalUrl}/oauth/introspect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: accessToken,
-          client_id: this.config.clientId,
-          client_secret: this.config.clientSecret,
-        }),
-      });
+      const response = await fetch(
+        `${this.config.internalUrl}/oauth/introspect`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: accessToken,
+            client_id: this.config.clientId,
+            client_secret: this.config.clientSecret,
+          }),
+        },
+      );
 
       if (!response.ok) {
         // A client-auth failure or a 5xx is our problem, not the user's. Failing

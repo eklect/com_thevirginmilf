@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import type { ProviderInfo } from '../api/social';
+import SocialButtons from '../components/SocialButtons.vue';
+import SocialDivider from '../components/SocialDivider.vue';
 import { RouterLink, useRoute } from 'vue-router';
 import ThemeToggle from '../components/ThemeToggle.vue';
 import { useAuthStore } from '../stores/auth';
@@ -21,7 +24,13 @@ const error = ref('');
 onMounted(() => {
   const description = route.query.error_description ?? route.query.error;
   if (description) error.value = String(description);
+  void auth.loadProviders();
 });
+
+/** The same trip, started at a provider's door on MAP's side. */
+function continueWith(provider: ProviderInfo['key']) {
+  auth.startSocial(provider, '/');
+}
 </script>
 
 <template>
@@ -57,6 +66,11 @@ onMounted(() => {
         <button type="button" class="btn mt-7 w-full" @click="auth.startLogin('/')">
           Continue to the portal
         </button>
+
+        <template v-if="auth.providers.length">
+          <SocialDivider />
+          <SocialButtons :providers="auth.providers" @pick="continueWith" />
+        </template>
 
         <p v-if="site.isEnabled('signup')" class="kicker mt-8 text-center">
           No account yet?

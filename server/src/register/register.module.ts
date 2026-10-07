@@ -8,5 +8,6 @@ import { RegisterService } from './register.service';
   imports: [SettingsModule, SubscribersModule],
   controllers: [RegisterController],
   providers: [RegisterService],
+  exports: [RegisterService],
 })
 export class RegisterModule {}

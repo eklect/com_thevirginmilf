@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { api, errorMessage } from '../api/client';
+import type { ProviderInfo } from '../api/social';
+import SocialButtons from '../components/SocialButtons.vue';
+import SocialDivider from '../components/SocialDivider.vue';
 import ThemeToggle from '../components/ThemeToggle.vue';
 import { useAuthStore } from '../stores/auth';
 import { useSiteStore } from '../stores/site';
@@ -30,6 +33,21 @@ const error = ref('');
 const busy = ref(false);
 const created = ref(false);
 
+onMounted(() => void auth.loadProviders());
+
+/**
+ * The provider buttons wait on the same two things as the submit button — the
+ * Terms box and the fields the server will insist on — and skip the password,
+ * which the provider stands in for.
+ */
+const socialReady = computed(
+  () =>
+    termsAccepted.value &&
+    firstName.value.trim() !== '' &&
+    lastName.value.trim() !== '' &&
+    email.value.trim() !== '',
+);
+
 /**
  * The account is created at MAP by this site's server, over the service plane.
  * Nothing comes back but `ok` — the next step is the ordinary sign-in trip to
@@ -54,6 +72,32 @@ async function submit() {
   } catch (e) {
     error.value = errorMessage(e);
   } finally {
+    busy.value = false;
+  }
+}
+
+/**
+ * Sign up with a provider. Nothing is created yet: the server seals the form
+ * (minus the password) into the sign-in transaction and answers with the MAP
+ * URL to go to. MAP signs the person in through the provider, creates the
+ * account, and the callback here finishes the signup with the saved fields.
+ */
+async function signUpWith(provider: ProviderInfo['key']) {
+  if (!socialReady.value) return;
+  error.value = '';
+  busy.value = true;
+  try {
+    const { redirectTo } = await api.post<{ redirectTo: string }>('/api/register/social', {
+      provider,
+      firstName: firstName.value,
+      lastName: lastName.value,
+      email: email.value,
+      emailAlerts: emailAlerts.value,
+      termsAccepted: termsAccepted.value,
+    });
+    window.location.assign(redirectTo);
+  } catch (e) {
+    error.value = errorMessage(e);
     busy.value = false;
   }
 }
@@ -154,6 +198,21 @@ async function submit() {
             {{ busy ? 'Creating…' : 'Create account' }}
           </button>
         </form>
+
+        <!-- The other way in: the same form, a provider instead of a password.
+             The box above gates these too. -->
+        <template v-if="!created && auth.providers.length">
+          <SocialDivider>or sign up with</SocialDivider>
+          <SocialButtons
+            :providers="auth.providers"
+            :disabled="busy || !socialReady"
+            verb="Sign up"
+            @pick="signUpWith"
+          />
+          <p v-if="termsAccepted && !socialReady" class="mt-3 text-xs text-muted">
+            Fill in your name and email first.
+          </p>
+        </template>
 
         <p class="kicker mt-8 text-center">
           Already have one?

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { api } from '../api/client';
 import type { Me } from '../api/types';
+import type { ProviderInfo } from '../api/social';
 
 /**
  * Who is signed in, as far as the browser knows.
@@ -16,6 +17,9 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<Me | null>(null);
   /** Distinguishes "not signed in" from "have not asked yet" for route guards. */
   const resolved = ref(false);
+  /** The upstream providers MAP offers — Google, Apple, … — for the sign-in and signup pages. */
+  const providers = ref<ProviderInfo[]>([]);
+  let providersLoaded = false;
 
   const isAdmin = computed(() => user.value?.isAdmin === true);
   const displayName = computed(() => {
@@ -52,6 +56,36 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
+   * Which provider buttons to draw. Asked once per page load; an unreachable
+   * API means no buttons, never an error.
+   */
+  async function loadProviders(): Promise<ProviderInfo[]> {
+    if (!providersLoaded) {
+      try {
+        providers.value = (
+          await api.get<{ providers: ProviderInfo[] }>('/api/auth/providers')
+        ).providers;
+      } catch {
+        providers.value = [];
+      }
+      providersLoaded = true;
+    }
+    return providers.value;
+  }
+
+  /**
+   * Sign in through a provider. The same full-page trip as `startLogin`, with
+   * MAP told which provider to start at; a first sign-in there creates the
+   * account, exactly as it would on MAP's own page.
+   */
+  function startSocial(provider: ProviderInfo['key'], returnTo = '/'): void {
+    const safe = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
+    window.location.assign(
+      `/api/auth/login?provider=${encodeURIComponent(provider)}&return_to=${encodeURIComponent(safe)}`,
+    );
+  }
+
+  /**
    * Ends the session here, then sends the browser to MAP to end it there too.
    * The server answers a POST with the URL rather than redirecting a GET — see
    * `AuthController.logout` for why.
@@ -64,5 +98,17 @@ export const useAuthStore = defineStore('auth', () => {
     window.location.assign(redirectTo);
   }
 
-  return { user, resolved, isAdmin, displayName, refresh, ensureResolved, startLogin, logout };
+  return {
+    user,
+    resolved,
+    isAdmin,
+    displayName,
+    providers,
+    refresh,
+    ensureResolved,
+    loadProviders,
+    startLogin,
+    startSocial,
+    logout,
+  };
 });
