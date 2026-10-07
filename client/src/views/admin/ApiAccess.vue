@@ -63,7 +63,7 @@ function openCreate() {
 
 /** What the create dialog turns into once the server answers. */
 const issued = ref<{ item: ApiClient; secret: string } | null>(null);
-const copied = ref<'id' | 'secret' | null>(null);
+const copied = ref<'address' | 'id' | 'secret' | null>(null);
 
 async function create() {
   saving.value = true;
@@ -80,7 +80,7 @@ async function create() {
   }
 }
 
-async function copy(value: string, which: 'id' | 'secret') {
+async function copy(value: string, which: 'address' | 'id' | 'secret') {
   try {
     await navigator.clipboard.writeText(value);
     copied.value = which;
@@ -106,6 +106,9 @@ async function confirmRevoke() {
 }
 
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'â€”');
+
+/** What the Email Templates tool asks for as the API address: this site's origin plus /api. */
+const apiAddress = `${window.location.origin}/api`;
 </script>
 
 <template>
@@ -115,9 +118,17 @@ const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'â€
   </header>
   <p class="mt-3 max-w-prose text-sm text-muted">
     Keys let another server â€” the Email Templates tool in My Company Tools â€” sign in to this
-    site's API as itself. Paste the id and secret into that tool's Settings. Revoking a key
+    site's API as itself. Paste the API address shown below, then the id and secret, into that tool's Settings. Revoking a key
     stops every token it minted at once.
   </p>
+
+  <div class="mt-4 flex flex-wrap items-center gap-2 text-sm">
+    <span class="text-muted">API address for the tool</span>
+    <code class="rounded border px-2 py-1 text-xs">{{ apiAddress }}</code>
+    <Button variant="outline" size="icon" aria-label="Copy API address" @click="copy(apiAddress, 'address')">
+      <Check v-if="copied === 'address'" /><Copy v-else />
+    </Button>
+  </div>
 
   <p
     v-if="error"
@@ -214,6 +225,15 @@ const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'â€
         </DialogDescription>
       </DialogHeader>
       <div v-if="issued" class="grid gap-4">
+        <div class="grid gap-2">
+          <Label>API address</Label>
+          <div class="flex gap-2">
+            <Input :model-value="apiAddress" readonly class="font-mono text-xs" />
+            <Button variant="outline" size="icon" aria-label="Copy API address" @click="copy(apiAddress, 'address')">
+              <Check v-if="copied === 'address'" /><Copy v-else />
+            </Button>
+          </div>
+        </div>
         <div class="grid gap-2">
           <Label>Client id</Label>
           <div class="flex gap-2">
