@@ -13,6 +13,7 @@ import { GamesModule } from './games/games.module';
 import { HealthController } from './health.controller';
 import { MailModule } from './mail/mail.module';
 import { MapClientModule } from './map-client/map-client.module';
+import { MapOptoutsModule } from './map-optouts/map-optouts.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PushModule } from './push/push.module';
 import { RegisterModule } from './register/register.module';
@@ -34,18 +35,19 @@ import { EmailTemplatesModule } from './email-templates/email-templates.module';
       useFactory: buildTypeOrmOptions,
     }),
     // Registers every `@Cron` job: the stream alert sweep, the two queue
-    // drains and the daily Steam sync. Each logs from
+    // drains, the MAP opt-out sync and the daily Steam sync. Each logs from
     // `onApplicationBootstrap`, because this module does not populate its
     // registry until its own bootstrap hook runs.
     ScheduleModule.forRoot(),
 
     // Cross-cutting: the relying-party half of MAP, the guards, file storage,
-    // the service-plane client that creates accounts at signup, and the two
-    // outbound queues.
+    // the service-plane client that creates accounts at signup, the mirror of
+    // who opted out of this venture at MAP, and the two outbound queues.
     AuthSessionModule,
     AuthModule,
     StorageModule,
     MapClientModule,
+    MapOptoutsModule,
     SubscribersModule,
     MailModule,
     PushModule,

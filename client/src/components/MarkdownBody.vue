@@ -7,7 +7,7 @@ import { computed } from 'vue';
 
 /**
  * Renders Markdown source: a review, her notes on a game, a stream's
- * description, the About and Privacy pages.
+ * description, the About page.
  *
  * ## This is the only `v-html` in the application
  *

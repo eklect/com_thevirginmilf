@@ -19,6 +19,13 @@ const password = ref('');
  * account without the email. The server treats an absent value as not ticked.
  */
 const emailAlerts = ref(true);
+/**
+ * NOT ticked to begin with, unlike the alerts box: agreeing to the Terms of
+ * Service and Privacy Policy is the person's act, not a default. The submit
+ * button stays off until it is, and `CreateRegisterDto` refuses the request
+ * without it.
+ */
+const termsAccepted = ref(false);
 const error = ref('');
 const busy = ref(false);
 const created = ref(false);
@@ -40,6 +47,7 @@ async function submit() {
       email: email.value,
       password: password.value,
       emailAlerts: emailAlerts.value,
+      termsAccepted: termsAccepted.value,
     });
     created.value = true;
     auth.startLogin('/account?welcome=1');
@@ -125,7 +133,24 @@ async function submit() {
             </span>
           </label>
 
-          <button type="submit" :disabled="busy" class="btn w-full">
+          <!-- The Terms and Privacy Policy are Mucci & Co's, one set for every
+               venture, served from the corporate site (`site.orgSiteUrl`). -->
+          <label class="flex cursor-pointer items-start gap-3 border-2 border-rule bg-surface-alt p-4">
+            <input v-model="termsAccepted" type="checkbox" required class="mt-0.5 size-4 accent-[var(--accent)]" />
+            <span>
+              <span class="font-head text-sm font-bold">
+                I agree to the Mucci &amp; Co
+                <a :href="`${site.orgSiteUrl}/terms`" target="_blank" rel="noopener noreferrer" class="underline decoration-accent decoration-2 underline-offset-4">Terms of Service</a>
+                and
+                <a :href="`${site.orgSiteUrl}/privacy`" target="_blank" rel="noopener noreferrer" class="underline decoration-accent decoration-2 underline-offset-4">Privacy Policy</a>.
+              </span>
+              <span class="mt-1 block text-xs text-muted">
+                One account for every Mucci &amp; Co venture — these terms cover all of them.
+              </span>
+            </span>
+          </label>
+
+          <button type="submit" :disabled="busy || !termsAccepted" class="btn w-full">
             {{ busy ? 'Creating…' : 'Create account' }}
           </button>
         </form>

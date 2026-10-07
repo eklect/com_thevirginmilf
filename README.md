@@ -35,7 +35,9 @@ under [First run](#first-run-in-order) are done there.
 - **Game pages** — cover art, screenshots, the facts, her rating, her notes and her reviews.
 - **Favorites** — every game she hearted, then the most-played games from Steam.
 - **About, Links, Live** — Live embeds the Twitch player and chat.
-- **Accounts through MAP.** No users table, no passwords here.
+- **Accounts through MAP.** No users table, no passwords here. Signing up means agreeing to
+  the Mucci & Co Terms of Service and Privacy Policy — one set for every venture — and MAP
+  records that acceptance. See [Terms, privacy and the MAP opt-out](#terms-privacy-and-the-map-opt-out).
 
 ---
 
@@ -160,6 +162,47 @@ per browser. The signup form has an "Email me when she streams" box, ticked by d
 Times in an alert are written in `alerts_timezone` (default `America/New_York`) and name the
 zone; the calendar on the site shows each visitor their own.
 
+### Terms, privacy and the MAP opt-out
+
+The Terms of Service and Privacy Policy are **Mucci & Co's**, one set for every venture, served
+from the corporate site at `/terms` and `/privacy`. This site links to them and keeps no copy:
+
+- **Signup consent.** The sign-up form has a required, unticked "I agree to the Mucci & Co
+  Terms of Service and Privacy Policy" box above the button; the button is off until it is
+  ticked. `CreateRegisterDto.termsAccepted` must be `true`, and `RegisterService` forwards it to
+  MAP as `termsAccepted` / `acceptedIp` / `acceptedUserAgent` on `POST /api/service/users`, so
+  the acceptance is recorded against the identity where it lives. MAP accepts the three fields
+  as optional (`TERMS_ACCEPTANCE_REQUIRED=false` there), so MAP deploys first and a venture
+  deployed before it is harmless — but a MAP without the DTO fields would refuse the body.
+- **The footer** links *Terms* and *Privacy* beside "A Mucci & Co venture", to
+  `site.orgSiteUrl` (MAP's issuer with the `map.` label dropped; `https://mucciandco.com` when
+  the bootstrap has not landed). The Steam attribution stays.
+- **`/privacy` here redirects** to the corporate policy (`window.location.replace` from a
+  route guard). The local page, its `privacy_body` setting and its `privacy` page toggle are
+  gone; `RemovePrivacyPage` deletes the rows the seed wrote, and the seed itself is untouched.
+
+**Removing this site in MAP's portal is an opt-out from its alerts.** MAP exposes every
+`sub` that removed the application at `GET /api/service/applications/me/opt-outs`
+(`client_credentials`, scope `installs:read`); `MapOptoutsScheduler` pages through it every
+five minutes and mirrors it into **`map_optouts`** (`user_id` = the MAP `sub`,
+`opted_out_at`, `synced_at`). Two checks use it:
+
+1. **Selection** — `SubscribersService.listDeliverable()` and
+   `PushSubscriptionsService.listAll()` leave those people out of a fan-out.
+2. **Delivery** — the mail drain skips a queued `stream_announced` / `stream_reminder`
+   (`MARKETING_KINDS` in `outbound-email.entity.ts`) whose `user_id` is opted out, and the
+   push drain skips every kind (every push is a stream alert). The row is marked
+   `status = 'skipped'`, `last_error = 'map_opt_out'`. Transactional kinds — `welcome`,
+   `password_reset`, `complete_profile` — are never skipped.
+
+The opt-out is a veto, not a change: `subscribers.is_subscribed` and `push_subscriptions`
+stay exactly as the person set them, so re-installing the site (the row leaves the feed on
+the next sync) resumes what they had chosen. If MAP refuses the scope — the `thevirginmilf/api`
+role needs `"installs:read"` in `service_scopes` in **both** `muccico_ecosystem` manifests —
+the scheduler warns once and keeps the last synced set; an error never empties the table.
+`map-client.service.ts` caches one service token **per scope**, so a venture not yet granted
+`installs:read` can still sign people up.
+
 ### Push, and the one service worker in the estate
 
 The estate rule is "manifest only, no service worker". Web Push cannot work without one, so
@@ -197,6 +240,7 @@ server/src/
   channels/ streams/                    where she streams; the calendar
   games/ categories/ reviews/ steam/    the library and the sync that feeds it
   push/                                 Web Push subscriptions and their queue
+  map-optouts/                          who removed this site at MAP — the alert veto
   notifications/                        the scheduler that turns a stream into alerts
   admin/                                every write route, all @AdminOnly()
 client/src/

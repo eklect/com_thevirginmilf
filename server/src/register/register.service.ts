@@ -38,12 +38,20 @@ export class RegisterService {
       .replace(/\/+$/, '');
   }
 
-  async create(dto: CreateRegisterDto): Promise<{ ok: true }> {
+  async create(
+    dto: CreateRegisterDto,
+    consent: { acceptedIp?: string; acceptedUserAgent?: string } = {},
+  ): Promise<{ ok: true }> {
     const user = await this.mapClient.createUser({
       email: dto.email,
       password: dto.password,
       firstName: dto.firstName,
       lastName: dto.lastName,
+      // The Terms of Service and Privacy Policy are Mucci & Co's, one set for
+      // every venture, and MAP keeps the acceptance beside the identity.
+      termsAccepted: dto.termsAccepted,
+      acceptedIp: consent.acceptedIp,
+      acceptedUserAgent: consent.acceptedUserAgent,
     });
 
     const emailAlerts = dto.emailAlerts ?? false;

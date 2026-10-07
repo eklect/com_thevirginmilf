@@ -32,7 +32,6 @@ export const SITE_SETTING_KEYS = [
   'links_intro',
   'subscribe_intro',
   'about_body',
-  'privacy_body',
   'headshot_upload_id',
   'logo_upload_id',
   'mail_from_name',
@@ -54,7 +53,6 @@ export const PAGE_KEYS = [
   'favorites',
   'links',
   'about',
-  'privacy',
   'signup',
   'settings',
 ] as const;
@@ -70,17 +68,17 @@ export const PAGE_PATHS: Record<PageKey, string> = {
   favorites: '/favorites',
   links: '/links',
   about: '/about',
-  privacy: '/privacy',
   signup: '/signup',
   settings: '/account',
 };
 
 /**
- * The pages that are never in the header nav: `home` is the wordmark,
- * `privacy` is a footer link, and `signup` / `settings` sit in the account
- * cluster. Mirrors `NON_NESTABLE_PAGE_KEYS` on the server.
+ * The pages that are never in the header nav: `home` is the wordmark, and
+ * `signup` / `settings` sit in the account cluster. Mirrors
+ * `NON_NESTABLE_PAGE_KEYS` on the server. (Privacy is no longer a page here —
+ * the footer links to Mucci & Co's policy.)
  */
-export const NON_NESTABLE_PAGE_KEYS: readonly PageKey[] = ['home', 'privacy', 'signup', 'settings'];
+export const NON_NESTABLE_PAGE_KEYS: readonly PageKey[] = ['home', 'signup', 'settings'];
 
 export interface PageSetting {
   key: PageKey;

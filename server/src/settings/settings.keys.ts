@@ -16,9 +16,8 @@ export const SITE_SETTING_KEYS = [
   'favorites_intro',
   'links_intro',
   'subscribe_intro',
-  // Markdown, rendered by the About and Privacy pages.
+  // Markdown, rendered by the About page.
   'about_body',
-  'privacy_body',
   'headshot_upload_id',
   /**
    * The footer logo — an upload id, or `''` for none.
@@ -84,7 +83,6 @@ export const PAGE_KEYS = [
   'favorites',
   'links',
   'about',
-  'privacy',
   'signup',
   'settings',
 ] as const;
@@ -97,14 +95,19 @@ export const isPageKey = (key: string): key is PageKey =>
 /**
  * The pages that can take part in the nav hierarchy, as a parent or a child.
  *
- * The four that are missing are missing for the same reason: they are not in
- * the header nav to begin with. `home` is the wordmark, `privacy` is a footer
- * link, and `signup` and `settings` sit in the account cluster on the right —
- * so nesting any of them would be a setting that visibly does nothing, which
- * is worse than a setting that is refused. `SettingsService.setPage` says so
- * in words.
+ * The three that are missing are missing for the same reason: they are not in
+ * the header nav to begin with. `home` is the wordmark, and `signup` and
+ * `settings` sit in the account cluster on the right — so nesting any of them
+ * would be a setting that visibly does nothing, which is worse than a setting
+ * that is refused. `SettingsService.setPage` says so in words.
+ *
+ * There is no `privacy` page any more: the Privacy Policy and Terms are Mucci
+ * & Co's, served from the corporate site, and the footer links there. The
+ * row the seed wrote is deleted by `RemovePrivacyPage`; until that has run,
+ * `SettingsService.pageSettings` drops any row whose key is not in
+ * `PAGE_KEYS`, so the stale row is harmless.
  */
-export const NON_NESTABLE_PAGE_KEYS = ['home', 'privacy', 'signup', 'settings'] as const;
+export const NON_NESTABLE_PAGE_KEYS = ['home', 'signup', 'settings'] as const;
 
 export const isNestablePageKey = (key: string): key is PageKey =>
   isPageKey(key) && !(NON_NESTABLE_PAGE_KEYS as readonly string[]).includes(key);

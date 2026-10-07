@@ -155,7 +155,7 @@ export class SettingsService {
     }
     if (!isNestablePageKey(key) || !isNestablePageKey(parentKey)) {
       throw new BadRequestException(
-        'Home, Privacy, Sign up and Account are not in the main navigation, so they cannot be a parent or a sub page.',
+        'Home, Sign up and Account are not in the main navigation, so they cannot be a parent or a sub page.',
       );
     }
     if (children > 0) {

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
 import { In, LessThan, LessThanOrEqual, Repository } from 'typeorm';
+import { MapOptoutsService } from '../map-optouts/map-optouts.service';
 import { OutboundPushEntity, PushKind, PushPayload } from './outbound-push.entity';
 import { PushConfig } from './push.config';
 import { PushSubscriptionsService } from './push-subscriptions.service';
@@ -43,6 +44,7 @@ export class PushQueueService {
     private readonly subscriptions: PushSubscriptionsService,
     private readonly transport: PushTransport,
     private readonly config: PushConfig,
+    private readonly optouts: MapOptoutsService,
   ) {}
 
   /** Adds notifications, ignoring any whose `dedupeKey` is already present. */
@@ -107,13 +109,27 @@ export class PushQueueService {
       .execute();
 
     const batch = await this.repo.find({ where: { claimId }, relations: { subscription: true } });
-    for (const row of batch) await this.deliver(row);
+    // Every push is a stream alert, so every row is subject to the MAP
+    // opt-out — checked here as well as at the fan-out, because a person can
+    // remove the venture while the row waits. One read for the batch.
+    const vetoed = batch.length ? await this.optouts.optedOutSet() : new Set<string>();
+    for (const row of batch) await this.deliver(row, vetoed);
     return batch.length;
   }
 
-  private async deliver(row: OutboundPushEntity): Promise<void> {
+  private async deliver(row: OutboundPushEntity, vetoed: Set<string>): Promise<void> {
     const subscription = row.subscription;
     if (!subscription) return; // Deleted since the claim; the cascade took the row.
+
+    if (vetoed.has(row.userId)) {
+      await this.repo.update(row.id, {
+        status: 'skipped',
+        claimId: null,
+        claimedAt: null,
+        lastError: 'map_opt_out',
+      });
+      return;
+    }
 
     try {
       const ttlSeconds = (row.expiresAt.getTime() - Date.now()) / 1000;

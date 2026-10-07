@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import {
+  Equals,
   IsBoolean,
   IsEmail,
   IsNotEmpty,
@@ -14,7 +15,8 @@ const trim = ({ value }: { value: unknown }) =>
 
 /**
  * What the signup form sends. Everything but `emailAlerts` goes to MAP, which
- * owns identity.
+ * owns identity — `termsAccepted` included, since the acceptance is recorded
+ * against the account there, not here.
  *
  * Notably absent: `roles`. MAP forces every new account to a plain user
  * regardless, and accepting the field at all would invite the idea that it
@@ -58,4 +60,16 @@ export class CreateRegisterDto {
   @IsOptional()
   @IsBoolean()
   emailAlerts?: boolean;
+
+  /**
+   * The Mucci & Co Terms of Service and Privacy Policy box. Required and
+   * required to be true: the form will not submit without it, and this is
+   * the server-side half of that. It is forwarded to MAP, which records the
+   * acceptance against the identity it creates — the venture keeps nothing.
+   */
+  @IsBoolean()
+  @Equals(true, {
+    message: 'You must agree to the Terms of Service and Privacy Policy',
+  })
+  termsAccepted!: boolean;
 }

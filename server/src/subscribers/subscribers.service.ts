@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { IsNull, Not, Repository } from 'typeorm';
 import type { RequestUser } from '../common/auth/principal';
+import { MapOptoutsService } from '../map-optouts/map-optouts.service';
 import { SubscriberEntity } from './subscriber.entity';
 
 /** MySQL's duplicate-key error, which the email write-through can legitimately hit. */
@@ -19,6 +20,7 @@ export class SubscribersService {
   constructor(
     @InjectRepository(SubscriberEntity)
     private readonly repo: Repository<SubscriberEntity>,
+    private readonly optouts: MapOptoutsService,
   ) {}
 
   /**
@@ -195,12 +197,21 @@ export class SubscribersService {
     return row;
   }
 
-  /** Everyone an alert should go to: opted in, and not suppressed by bounces. */
+  /**
+   * Everyone an alert should go to: opted in, not suppressed by bounces, and
+   * not opted out of this venture at MAP. The last is a veto over the first,
+   * not a change to it — `is_subscribed` stays what the person set, so
+   * re-installing the venture in the portal resumes exactly that.
+   */
   async listDeliverable(): Promise<SubscriberEntity[]> {
-    return this.repo.find({
-      where: { isSubscribed: true, suppressedAt: IsNull(), email: Not(IsNull()) },
-      order: { createdAt: 'ASC' },
-    });
+    const [rows, vetoed] = await Promise.all([
+      this.repo.find({
+        where: { isSubscribed: true, suppressedAt: IsNull(), email: Not(IsNull()) },
+        order: { createdAt: 'ASC' },
+      }),
+      this.optouts.optedOutSet(),
+    ]);
+    return rows.filter((row) => !row.userId || !vetoed.has(row.userId));
   }
 
   /** For the read-only admin screen. */

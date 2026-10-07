@@ -52,13 +52,6 @@ const site = useSiteStore();
               {{ child.navLabel }}
             </RouterLink>
           </template>
-          <RouterLink
-            v-if="site.isEnabled('privacy')"
-            to="/privacy"
-            class="font-head text-sm font-semibold no-underline hover:underline"
-          >
-            Privacy
-          </RouterLink>
         </nav>
 
         <div class="flex flex-col gap-2.5">
@@ -89,6 +82,12 @@ const site = useSiteStore();
         <a :href="site.orgSiteUrl" target="_blank" rel="noopener noreferrer" class="no-underline hover:underline">
           A Mucci &amp; Co venture
         </a>
+        <!-- One Terms and one Privacy Policy for every venture, kept at the
+             corporate site. The local /privacy route redirects there. -->
+        ·
+        <a :href="`${site.orgSiteUrl}/terms`" target="_blank" rel="noopener noreferrer" class="no-underline hover:underline">Terms</a>
+        ·
+        <a :href="`${site.orgSiteUrl}/privacy`" target="_blank" rel="noopener noreferrer" class="no-underline hover:underline">Privacy</a>
       </p>
       <!-- Required by the Steam Web API terms wherever Steam data is shown. -->
       <p class="mt-3 max-w-prose text-xs text-white/50">

@@ -17,9 +17,20 @@ export type PushKind = (typeof PUSH_KINDS)[number];
  * `expired` is terminal and means the notification's moment passed before it
  * could be delivered — a "going live in 30 minutes" that is still queued two
  * hours later is worse than no notification. `logged` means `PUSH_ENABLED`
- * was off, exactly as it does for mail.
+ * was off, exactly as it does for mail. `skipped` means the person had
+ * removed this venture in MAP's portal by the time the drain reached the row
+ * (`last_error = 'map_opt_out'`) — every push kind is a stream alert, so
+ * every one of them is subject to that opt-out.
  */
-export const PUSH_STATUSES = ['pending', 'sending', 'sent', 'logged', 'expired', 'dead'] as const;
+export const PUSH_STATUSES = [
+  'pending',
+  'sending',
+  'sent',
+  'logged',
+  'skipped',
+  'expired',
+  'dead',
+] as const;
 export type PushStatus = (typeof PUSH_STATUSES)[number];
 
 /** What the service worker receives and turns into a notification. */

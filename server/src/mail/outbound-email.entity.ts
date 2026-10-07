@@ -26,11 +26,28 @@ export const OUTBOUND_KINDS = [
 export type OutboundKind = (typeof OUTBOUND_KINDS)[number];
 
 /**
+ * The kinds a person can opt out of by removing this venture in MAP's portal
+ * (`map_optouts`). Everything else is transactional — a welcome, a password
+ * link, "complete your profile" — and goes regardless: those are about the
+ * account, not about hearing from the venture.
+ */
+export const MARKETING_KINDS: readonly OutboundKind[] = ['stream_announced', 'stream_reminder'];
+
+/**
  * `logged` is terminal and means "`MAIL_ENABLED` was off, so this went to the
  * log instead". It is kept distinct from `sent` so that turning a venture's
  * mail on later never leaves anyone guessing which rows were really delivered.
+ * `skipped` is terminal too: a marketing kind whose recipient had opted out at
+ * MAP by the time the drain reached it (`last_error = 'map_opt_out'`).
  */
-export const OUTBOUND_STATUSES = ['pending', 'sending', 'sent', 'logged', 'dead'] as const;
+export const OUTBOUND_STATUSES = [
+  'pending',
+  'sending',
+  'sent',
+  'logged',
+  'skipped',
+  'dead',
+] as const;
 export type OutboundStatus = (typeof OUTBOUND_STATUSES)[number];
 
 /**

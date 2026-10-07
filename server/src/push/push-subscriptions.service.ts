@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
+import { MapOptoutsService } from '../map-optouts/map-optouts.service';
 import { SavePushSubscriptionDto } from './dto/push.dto';
 import { PushSubscriptionEntity } from './push-subscription.entity';
 
@@ -46,6 +47,7 @@ export class PushSubscriptionsService {
   constructor(
     @InjectRepository(PushSubscriptionEntity)
     private readonly repo: Repository<PushSubscriptionEntity>,
+    private readonly optouts: MapOptoutsService,
   ) {}
 
   /**
@@ -102,9 +104,17 @@ export class PushSubscriptionsService {
     return this.repo.count({ where: { userId } });
   }
 
-  /** Every browser an alert should go to. */
+  /**
+   * Every browser an alert should go to — less the people who removed this
+   * venture in MAP's portal. Their rows stay: the opt-out is a veto, and a
+   * re-install resumes the devices they had switched on.
+   */
   async listAll(): Promise<PushSubscriptionEntity[]> {
-    return this.repo.find({ order: { createdAt: 'ASC' } });
+    const [rows, vetoed] = await Promise.all([
+      this.repo.find({ order: { createdAt: 'ASC' } }),
+      this.optouts.optedOutSet(),
+    ]);
+    return rows.filter((row) => !vetoed.has(row.userId));
   }
 
   async summary(): Promise<{ devices: number; people: number }> {

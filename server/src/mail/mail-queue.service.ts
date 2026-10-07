@@ -2,9 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
 import { In, LessThan, LessThanOrEqual, Repository } from 'typeorm';
+import { MapOptoutsService } from '../map-optouts/map-optouts.service';
 import { MailConfig } from './mail.config';
 import { MailDeliveryError, MailTransport } from './mail.transport';
-import { OutboundEmailEntity, OutboundKind } from './outbound-email.entity';
+import { MARKETING_KINDS, OutboundEmailEntity, OutboundKind } from './outbound-email.entity';
 import { RenderedEmail } from './templates/layout';
 
 /** One message to enqueue. `dedupeKey` is what makes the enqueue replayable. */
@@ -45,6 +46,7 @@ export class MailQueueService {
     private readonly repo: Repository<OutboundEmailEntity>,
     private readonly transport: MailTransport,
     private readonly config: MailConfig,
+    private readonly optouts: MapOptoutsService,
   ) {}
 
   /**
@@ -113,11 +115,27 @@ export class MailQueueService {
       .execute();
 
     const batch = await this.repo.find({ where: { claimId } });
-    for (const row of batch) await this.deliver(row);
+    // The opt-out check at delivery, as well as at selection: a row can sit in
+    // the queue across a sync, and a person who removed the venture after the
+    // fan-out must still not hear from it. One read for the batch.
+    const vetoed = batch.some((row) => MARKETING_KINDS.includes(row.kind))
+      ? await this.optouts.optedOutSet()
+      : new Set<string>();
+    for (const row of batch) await this.deliver(row, vetoed);
     return batch.length;
   }
 
-  private async deliver(row: OutboundEmailEntity): Promise<void> {
+  private async deliver(row: OutboundEmailEntity, vetoed: Set<string>): Promise<void> {
+    if (MARKETING_KINDS.includes(row.kind) && row.userId && vetoed.has(row.userId)) {
+      await this.repo.update(row.id, {
+        status: 'skipped',
+        claimId: null,
+        claimedAt: null,
+        lastError: 'map_opt_out',
+      });
+      return;
+    }
+
     try {
       const outcome = await this.transport.send({
         to: row.toEmail,

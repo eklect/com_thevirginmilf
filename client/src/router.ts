@@ -77,10 +77,25 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/About.vue'),
     meta: { pageKey: 'about', title: 'About' },
   },
+  /**
+   * The Privacy Policy is Mucci & Co's — one document for every venture,
+   * served from the corporate site — so this address, which old links and
+   * the Steam attribution may still point at, hands the browser over to it.
+   * A hard `replace`, not a router redirect: the destination is another
+   * origin. The component is never rendered, since the guard cancels the
+   * navigation; it exists because a route record has to name one.
+   */
   {
     path: '/privacy',
-    component: () => import('./views/Privacy.vue'),
-    meta: { pageKey: 'privacy', title: 'Privacy' },
+    component: { render: () => null },
+    beforeEnter: () => {
+      const site = useSiteStore();
+      // `orgSiteUrl` already falls back to production when the bootstrap
+      // has not landed; the second fallback is for a store that threw.
+      const base = site.orgSiteUrl || 'https://mucciandco.com';
+      window.location.replace(`${base}/privacy`);
+      return false;
+    },
   },
 
   {

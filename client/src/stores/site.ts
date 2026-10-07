@@ -52,8 +52,8 @@ export const useSiteStore = defineStore('site', () => {
   /**
    * The navigation, as a one-level tree. The header and footer both draw this.
    *
-   * `home` is the wordmark, `privacy` is a footer link and `signup`/`settings`
-   * sit in the account cluster, so none of the four is ever in here. A node
+   * `home` is the wordmark and `signup`/`settings` sit in the account
+   * cluster, so none of the three is ever in here. A node
    * with children becomes a dropdown; one without stays a plain link.
    *
    * ## A sub page whose parent is switched off stands where the group stood

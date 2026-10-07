@@ -169,11 +169,6 @@ const GROUPS: {
       },
     ],
   },
-  {
-    title: 'Privacy page',
-    note: 'Linked from the footer. Steam’s terms ask for one wherever Steam data is shown.',
-    fields: [{ key: 'privacy_body', label: 'Privacy page', markdown: true }],
-  },
 ];
 
 onMounted(async () => {
