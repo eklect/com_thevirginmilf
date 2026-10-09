@@ -35,6 +35,12 @@ export class EmailTemplatesConfig {
   readonly imageMaxBytes: number;
   /** Absolute base of the public image URLs: `https://simplicourt.com/api`. */
   readonly publicApiBase: string;
+  /**
+   * When set, the asset host the image URLs are built on —
+   * `https://cdn.mucciandco.com/<alias>`. Unset (the dev box), this API
+   * serves them itself at `<publicApiBase>/email-images/<stem>`.
+   */
+  readonly imageBaseUrl: string | null;
 
   readonly gitSync: boolean;
   readonly gitSshKey: string | null;
@@ -65,6 +71,7 @@ export class EmailTemplatesConfig {
 
     const site = str('PUBLIC_SITE_URL').replace(/\/+$/, '');
     this.publicApiBase = str('EMAIL_TEMPLATES_PUBLIC_API_BASE', `${site}/api`).replace(/\/+$/, '');
+    this.imageBaseUrl = str('EMAIL_TEMPLATES_IMAGE_BASE_URL').replace(/\/+$/, '') || null;
 
     this.gitSync = flag('EMAIL_TEMPLATES_GIT_SYNC');
     this.gitSshKey = str('EMAIL_TEMPLATES_GIT_SSH_KEY') || null;

@@ -106,7 +106,7 @@ export class EmailImagesService {
       mimeType,
       bytes,
       modifiedAt: mtime.toISOString(),
-      url: `${this.config.publicApiBase}/email-images/${stem}`,
+      url: `${this.config.imageBaseUrl ?? `${this.config.publicApiBase}/email-images`}/${stem}`,
     };
   }
 }
