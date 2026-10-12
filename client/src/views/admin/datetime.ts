@@ -1,5 +1,6 @@
 /**
- * `<input type="datetime-local">` carries no zone: it reads and writes wall
+ * A `datetime-local` value (`YYYY-MM-DDTHH:mm`, what `DateTimeInput` speaks)
+ * carries no zone: it reads and writes wall
  * time where the admin is sitting. These convert on both edges, so the API
  * only ever sees an ISO instant.
  */

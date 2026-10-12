@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { api, errorMessage } from '../../api/client';
 import type { AdminGame, Review } from '../../api/types';
 import MarkdownEditor from '../../components/MarkdownEditor.vue';
+import { DateTimeInput } from '../../components/date';
 import StarRating from '../../components/StarRating.vue';
 import ConfirmButton from './ConfirmButton.vue';
 import { fromLocalInput, toLocalInput } from './datetime';
@@ -159,7 +160,7 @@ async function remove() {
       </label>
       <div>
         <label for="publishedAt" class="kicker block">Dated (optional)</label>
-        <input id="publishedAt" v-model="form.publishedAt" type="datetime-local" class="input mt-1.5" />
+        <DateTimeInput id="publishedAt" v-model="form.publishedAt" class="mt-1.5" />
         <p class="mt-1.5 text-xs text-muted">Empty is stamped the first time it is published.</p>
       </div>
     </div>

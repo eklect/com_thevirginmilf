@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { api, errorMessage } from '../../api/client';
 import type { AdminChannel, AdminGame, AdminStream } from '../../api/types';
 import MarkdownEditor from '../../components/MarkdownEditor.vue';
+import { DateTimeInput } from '../../components/date';
 import { fromLocalInput, localZone, toLocalInput } from './datetime';
 import { useSaveNotice } from './useSaveNotice';
 
@@ -135,11 +136,11 @@ async function save() {
     <div class="grid gap-5 sm:grid-cols-2">
       <div>
         <label for="startsAt" class="kicker block">Starts</label>
-        <input id="startsAt" v-model="form.startsAt" type="datetime-local" required class="input mt-1.5" />
+        <DateTimeInput id="startsAt" v-model="form.startsAt" required class="mt-1.5" />
       </div>
       <div>
         <label for="endsAt" class="kicker block">Ends (optional)</label>
-        <input id="endsAt" v-model="form.endsAt" type="datetime-local" class="input mt-1.5" />
+        <DateTimeInput id="endsAt" v-model="form.endsAt" class="mt-1.5" />
       </div>
       <p class="-mt-2 text-xs text-muted sm:col-span-2">
         Your time here ({{ zone }}). The calendar shows each visitor their own.

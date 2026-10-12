@@ -228,6 +228,16 @@ rule id is in `/var/log/modsec_audit/audit.log` in the container.
 Every prose-writing route is under `/admin/`, which is what the manifest's
 `markdown_content: true` exclusion covers.
 
+### Date and time fields
+
+The admin's date and time fields — a stream's start and end, a review's date — are
+`client/src/components/date/` (`DateInput`, `TimeInput`, `DateTimeInput`, from
+me_playerconnect_app), not a native `<input type=date|time|datetime-local|month>`, which on a
+phone brings up no keyboard and in these layouts often no picker. Each one takes typing on the
+phone's number pad or ordinary keyboard and has a drawn popover picker beside it. Their `v-model`
+strings are the native ones (`YYYY-MM-DDTHH:mm` here), so `views/admin/datetime.ts` converts them
+unchanged. Don't reintroduce native date inputs.
+
 ---
 
 ## Layout
@@ -246,6 +256,7 @@ server/src/
 client/src/
   views/            public pages        views/admin/   the dashboard
   components/calendar/                  the estate's shared calendar          (from com_mycotools_app)
+  components/date/ lib/date-entry.ts    typed date/time fields with a picker  (from me_playerconnect_app)
   lib/push.ts                           everything the browser does for push
   styles.css                            tokens, @theme inline, component classes
 ```
