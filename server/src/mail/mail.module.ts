@@ -12,8 +12,9 @@ import { OutboundEmailEntity } from './outbound-email.entity';
  * The same module is carried by MAP, `com_simplicourt`, `com_simplicourt_app`,
  * `com_mycotools` and `com_mycotools_app`. Only `mail.config.ts`'s two
  * constants and the `templates/` differ; keep the rest identical so a fix in
- * one is a copy to the others. This copy differs in two more places, both
- * additive: `OUTBOUND_KINDS` carries the two stream alerts, and the layout has
+ * one is a copy to the others. This copy differs in two more places:
+ * `OUTBOUND_KINDS` carries the two stream alerts (and drops the unused
+ * `password_reset` / `complete_profile`), and the layout has
  * a `footerLink` for their unsubscribe link. `MAIL_ENABLED` decides whether a venture's mail
  * is live — see `MailConfig`.
  *

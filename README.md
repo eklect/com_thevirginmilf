@@ -192,8 +192,8 @@ five minutes and mirrors it into **`map_optouts`** (`user_id` = the MAP `sub`,
 2. **Delivery** — the mail drain skips a queued `stream_announced` / `stream_reminder`
    (`MARKETING_KINDS` in `outbound-email.entity.ts`) whose `user_id` is opted out, and the
    push drain skips every kind (every push is a stream alert). The row is marked
-   `status = 'skipped'`, `last_error = 'map_opt_out'`. Transactional kinds — `welcome`,
-   `password_reset`, `complete_profile` — are never skipped.
+   `status = 'skipped'`, `last_error = 'map_opt_out'`. The one transactional kind,
+   `welcome`, is never skipped.
 
 The opt-out is a veto, not a change: `subscribers.is_subscribed` and `push_subscriptions`
 stay exactly as the person set them, so re-installing the site (the row leaves the feed on
@@ -329,3 +329,32 @@ Two server modules every venture backend carries, copied from
 `VENTURE` in `server/src/common/venture.ts` is `com_thevirginmilf`. Production sets
 `EMAIL_TEMPLATES_GIT_SYNC=true` with the key from
 `muccico keys thevirginmilf/api --templates`; the dev box keeps it off.
+
+## Email events
+
+Every kind of mail this server sends is registered in
+`server/src/email-templates/kinds.ts` (`EMAIL_KINDS`), with the placeholders its call site
+passes to `FileTemplateService.render`. The live files in
+`muccico_email_templates/com_thevirginmilf/live/` use exactly these names.
+
+| Kind | Sent when | Marketing | Placeholders |
+|---|---|---|---|
+| `welcome` | `RegisterService` — a signup by the form (`create`) or a provider button (`completeSocial`); once per `sub` | no | `firstName`, `streamsUrl`, `alertsLine`, `brandName`, `homeUrl`, `logoUrl` |
+| `stream_announced` | `StreamAlertsScheduler` — a published stream has settled for two minutes | yes | `streamerName`, `title`, `when`, `gameLine`, `whereLine`, `eventUrl`, `unsubscribeUrl`, `lead`, `brandName`, `homeUrl`, `logoUrl` |
+| `stream_reminder` | `StreamAlertsScheduler` — `reminder_lead_minutes` before the start | yes | the same as `stream_announced` |
+
+`alertsLine`, `gameLine` and `whereLine` are whole sentences worked out by the server
+(`alertsLine`, `gameLine`, `whereLine` in `server/src/mail/templates/`); `gameLine` and
+`whereLine` are empty when a stream has no visible game or published channel. `logoUrl` is
+always empty — mail draws the site name as a wordmark (`mail/templates/brand.ts`). The
+marketing kinds are `MARKETING_KINDS`, so the MAP opt-out applies to them; `kinds.spec.ts`
+holds the two lists together, and checks that each default file, filled in, is the
+TypeScript template byte for byte. There is no contact form, so no `contact_received`.
+
+- `GET /api/service/email-templates/kinds` (scope `email-templates:read`) returns each kind
+  with `live` (both files exist) and its default rendering as `{{placeholder}}` tokens.
+- `npm run email-templates:seed` (in `server/`) writes the default pair for any kind with no
+  live pair (`-- --dry-run` lists, `-- --force` overwrites).
+- `MailQueueService.enqueue` warns once per kind for anything enqueued that is not
+  registered. **A feature that starts sending a new kind registers it in the same change.**
+- `npm test` runs the specs (`server/src/**/*.spec.ts`).

@@ -19,6 +19,7 @@ import { RequireScope } from '../service-auth/service-auth.decorators';
 import { ServiceTokenGuard } from '../service-auth/service-token.guard';
 import { ArchiveTemplatesDto, SaveTemplateDto } from './dto/email-templates.dto';
 import { EmailImagesService } from './email-images.service';
+import { EmailKindsService } from './email-kinds.service';
 import { EmailTemplatesService } from './email-templates.service';
 import { assertFolder } from './template-name';
 
@@ -39,12 +40,24 @@ export class EmailTemplatesController {
   constructor(
     private readonly templates: EmailTemplatesService,
     private readonly images: EmailImagesService,
+    private readonly kinds: EmailKindsService,
   ) {}
 
   @Get('status')
   @RequireScope('email-templates:read')
   status() {
     return this.templates.status();
+  }
+
+  /**
+   * The email event registry: every kind this site sends, the placeholders its
+   * call site passes, whether `live/<kind>` is in use, and the built-in
+   * template as `{{placeholder}}` defaults. Kept above `:folder/:file`.
+   */
+  @Get('kinds')
+  @RequireScope('email-templates:read')
+  async listKinds() {
+    return this.kinds.list();
   }
 
   @Get('live')

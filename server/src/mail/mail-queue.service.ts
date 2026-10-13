@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
 import { In, LessThan, LessThanOrEqual, Repository } from 'typeorm';
+import { warnIfUnregisteredKind } from '../email-templates/email-kinds';
+import { EMAIL_KINDS } from '../email-templates/kinds';
 import { MapOptoutsService } from '../map-optouts/map-optouts.service';
 import { MailConfig } from './mail.config';
 import { MailDeliveryError, MailTransport } from './mail.transport';
@@ -59,6 +61,12 @@ export class MailQueueService {
   async enqueue(requests: EnqueueRequest | EnqueueRequest[]): Promise<number> {
     const list = Array.isArray(requests) ? requests : [requests];
     if (!list.length) return 0;
+    // A kind missing from the registry still sends; it just cannot be edited.
+    for (const request of list) {
+      warnIfUnregisteredKind(request.kind, EMAIL_KINDS, (message) =>
+        this.logger.warn(message),
+      );
+    }
 
     const now = new Date();
     const rows = list.map((request) => ({

@@ -7,11 +7,13 @@ import { gameTitle } from '../games/games.serializer';
 import { FileTemplateService } from '../email-templates/file-template.service';
 import { MailQueueService } from '../mail/mail-queue.service';
 import { MailConfig } from '../mail/mail.config';
-import { Brand } from '../mail/templates/layout';
+import { mailBrand } from '../mail/templates/brand';
 import {
   StreamAlertArgs,
+  gameLine,
   streamAnnouncedEmail,
   streamReminderEmail,
+  whereLine,
 } from '../mail/templates/stream-alerts';
 import { PushQueueService } from '../push/push-queue.service';
 import { PushSubscriptionsService } from '../push/push-subscriptions.service';
@@ -287,17 +289,18 @@ export class StreamAlertsScheduler implements OnApplicationBootstrap {
       return false;
     }
 
-    const brand: Brand = { name: context.siteName, homeUrl: this.siteUrl, accent: '#d2111d' };
+    const brand = mailBrand(context.siteName, this.siteUrl);
     const eventUrl = `${this.siteUrl}/streams/${event.id}`;
+    const channels = [...(event.channelLinks ?? [])]
+      .filter((link) => link.channel?.isPublished)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((link) => link.channel!.name);
     const base = {
       streamerName: context.streamerName,
       title: event.title,
       when: formatWhen(event.startsAt, context.zone),
-      channels: [...(event.channelLinks ?? [])]
-        .filter((link) => link.channel?.isPublished)
-        .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((link) => link.channel!.name),
-      gameTitle: event.game && !event.game.isHidden ? gameTitle(event.game) : null,
+      gameLine: gameLine(event.game && !event.game.isHidden ? gameTitle(event.game) : null),
+      whereLine: whereLine(channels),
       eventUrl,
     };
 
@@ -309,21 +312,17 @@ export class StreamAlertsScheduler implements OnApplicationBootstrap {
             ...base,
             unsubscribeUrl: `${this.siteUrl}/unsubscribe/${subscriber.unsubscribeToken}`,
           };
-          // The editable file in email_templates/<venture>/live wins when it
-          // exists; the TypeScript template is what ships until somebody edits.
-          const fromFile = await this.fileTemplates.render(kind, {
-            streamerName: base.streamerName,
-            title: base.title,
-            when: base.when,
-            gameLine: base.gameTitle ? `Playing ${base.gameTitle}.` : '',
-            whereLine: whereLine(base.channels),
-            eventUrl: base.eventUrl,
-            unsubscribeUrl: args.unsubscribeUrl,
+          // Exactly the placeholders `EMAIL_KINDS` declares for both kinds.
+          const vars = {
+            ...args,
             lead,
             brandName: brand.name,
             homeUrl: brand.homeUrl,
             logoUrl: brand.logoUrl ?? null,
-          });
+          };
+          // The editable file in email_templates/<venture>/live wins when it
+          // exists; the TypeScript template is what ships until somebody edits.
+          const fromFile = await this.fileTemplates.render(kind, vars);
           return {
             kind,
             dedupeKey: `${kind}:${options.dedupeScope}:${subscriber.id}`,
@@ -333,8 +332,8 @@ export class StreamAlertsScheduler implements OnApplicationBootstrap {
             email:
               fromFile ??
               (kind === 'stream_reminder'
-                ? streamReminderEmail(brand, { ...args, lead })
-                : streamAnnouncedEmail(brand, args)),
+                ? streamReminderEmail(brand, vars)
+                : streamAnnouncedEmail(brand, vars)),
             headers: unsubscribeHeaders(this.siteUrl, subscriber),
           };
         }),
@@ -430,11 +429,4 @@ function unsubscribeHeaders(siteUrl: string, subscriber: SubscriberEntity): Reco
     'List-Unsubscribe': `<${siteUrl}/api/unsubscribe/${subscriber.unsubscribeToken}>`,
     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
   };
-}
-
-/** The "Watch on …" sentence `stream-alerts.ts` builds, for the file template. */
-function whereLine(channels: string[]): string {
-  if (!channels.length) return '';
-  if (channels.length === 1) return `Watch on ${channels[0]}.`;
-  return `Watch on ${channels.slice(0, -1).join(', ')} or ${channels[channels.length - 1]}.`;
 }

@@ -10,26 +10,23 @@ import {
 /**
  * The kinds of mail this venture sends, as a closed list.
  *
- * The first three are the same in every repo that carries this module, whether
- * or not that repo sends all three today. The two `stream_*` kinds are this
- * venture's own and are the one deliberate divergence from the shared list:
- * keeping subscribers in the loop is what the site is for. The list staying
- * closed is what stops `outbound_emails` becoming a junk drawer.
+ * The shared module elsewhere also lists `password_reset` and
+ * `complete_profile`; this venture sends neither (MAP owns the password, and
+ * nobody here is invited), so they are gone — every kind listed must have a
+ * call site and an entry in `EMAIL_KINDS` (`email-templates/kinds.ts`). The
+ * column is a varchar, so the list is a type, not a constraint. The two
+ * `stream_*` kinds are this venture's own: keeping subscribers in the loop is
+ * what the site is for. The list staying closed is what stops
+ * `outbound_emails` becoming a junk drawer.
  */
-export const OUTBOUND_KINDS = [
-  'welcome',
-  'password_reset',
-  'complete_profile',
-  'stream_announced',
-  'stream_reminder',
-] as const;
+export const OUTBOUND_KINDS = ['welcome', 'stream_announced', 'stream_reminder'] as const;
 export type OutboundKind = (typeof OUTBOUND_KINDS)[number];
 
 /**
  * The kinds a person can opt out of by removing this venture in MAP's portal
- * (`map_optouts`). Everything else is transactional — a welcome, a password
- * link, "complete your profile" — and goes regardless: those are about the
- * account, not about hearing from the venture.
+ * (`map_optouts`). Everything else is transactional — today only the
+ * welcome — and goes regardless: it is about the account, not about hearing
+ * from the venture. Keep this in step with `marketing` in `EMAIL_KINDS`.
  */
 export const MARKETING_KINDS: readonly OutboundKind[] = ['stream_announced', 'stream_reminder'];
 
@@ -62,7 +59,7 @@ export type OutboundStatus = (typeof OUTBOUND_STATUSES)[number];
  *
  * ## `dedupeKey` is the idempotence guarantee
  *
- * `welcome:<userId>`, `password_reset:<userId>:<window>` and so on. A retried
+ * `welcome:<userId>`, `stream_reminder:<event>:<start>:<subscriber>` and so on. A retried
  * request, a double-clicked button, a replayed import — all of them collide on
  * this unique index and become no-ops.
  */

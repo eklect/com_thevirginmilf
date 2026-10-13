@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileTemplateService } from '../email-templates/file-template.service';
 import { MailQueueService } from '../mail/mail-queue.service';
-import { welcomeEmail } from '../mail/templates/welcome';
+import { mailBrand } from '../mail/templates/brand';
+import { alertsLine, welcomeEmail } from '../mail/templates/welcome';
 import { MapClientService } from '../map-client/map-client.service';
 import { SettingsService } from '../settings/settings.service';
 import { SubscribersService } from '../subscribers/subscribers.service';
@@ -128,6 +129,16 @@ export class RegisterService {
     try {
       const siteName =
         (await this.settings.all()).site_name.trim() || 'The Virgin MILF';
+      const brand = mailBrand(siteName, this.siteUrl);
+      // Exactly the placeholders `EMAIL_KINDS` declares for `welcome`.
+      const vars = {
+        firstName: firstName,
+        streamsUrl: `${this.siteUrl}/streams`,
+        alertsLine: alertsLine(emailAlerts),
+        brandName: brand.name,
+        homeUrl: brand.homeUrl,
+        logoUrl: brand.logoUrl ?? null,
+      };
       await this.mailQueue.enqueue({
         kind: 'welcome',
         dedupeKey: `welcome:${userId}`,
@@ -136,24 +147,8 @@ export class RegisterService {
         // The editable file in email_templates/<venture>/live wins when it
         // exists; the TypeScript template is what ships until somebody edits.
         email:
-          (await this.fileTemplates.render('welcome', {
-            firstName: firstName,
-            streamsUrl: `${this.siteUrl}/streams`,
-            alertsLine: emailAlerts
-              ? 'You asked to hear about streams, so you will get an email when one is scheduled and another shortly before it starts.'
-              : 'Stream alerts are off for your account. You can switch them on from your account page at any time.',
-            brandName: siteName,
-            homeUrl: this.siteUrl,
-            logoUrl: null,
-          })) ??
-          welcomeEmail(
-            { name: siteName, homeUrl: this.siteUrl, accent: '#d2111d' },
-            {
-              firstName: firstName,
-              streamsUrl: `${this.siteUrl}/streams`,
-              emailAlerts,
-            },
-          ),
+          (await this.fileTemplates.render('welcome', vars)) ??
+          welcomeEmail(brand, vars),
       });
     } catch {
       // A welcome that could not be queued is not worth a failed signup.

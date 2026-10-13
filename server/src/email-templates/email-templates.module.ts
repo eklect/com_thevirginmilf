@@ -4,6 +4,7 @@ import { memoryStorage } from 'multer';
 import { ServiceAuthModule } from '../service-auth/service-auth.module';
 import { EmailImagesController } from './email-images.controller';
 import { EmailImagesService } from './email-images.service';
+import { EmailKindsService } from './email-kinds.service';
 import { EmailTemplatesConfig } from './email-templates.config';
 import { EmailTemplatesController } from './email-templates.controller';
 import { EmailTemplatesService } from './email-templates.service';
@@ -34,7 +35,7 @@ import { GitSyncService } from './git-sync.service';
     }),
   ],
   controllers: [EmailTemplatesController, EmailImagesController],
-  providers: [EmailTemplatesConfig, GitSyncService, EmailTemplatesService, EmailImagesService, FileTemplateService],
+  providers: [EmailTemplatesConfig, GitSyncService, EmailTemplatesService, EmailImagesService, FileTemplateService, EmailKindsService],
   exports: [FileTemplateService, EmailTemplatesConfig],
 })
 export class EmailTemplatesModule {}
