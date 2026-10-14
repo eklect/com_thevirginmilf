@@ -5,6 +5,7 @@ import { MailQueueService } from '../mail/mail-queue.service';
 import { mailBrand } from '../mail/templates/brand';
 import { alertsLine, welcomeEmail } from '../mail/templates/welcome';
 import { MapClientService } from '../map-client/map-client.service';
+import { listUnsubscribeHeaders } from '../map-client/unsubscribe-link';
 import { SettingsService } from '../settings/settings.service';
 import { SubscribersService } from '../subscribers/subscribers.service';
 import { CreateRegisterDto } from './dto/create-register.dto';
@@ -130,11 +131,17 @@ export class RegisterService {
       const siteName =
         (await this.settings.all()).site_name.trim() || 'The Virgin MILF';
       const brand = mailBrand(siteName, this.siteUrl);
+      // MAP's signed "Unsubscribe from <Brand>" link. Null when MAP could not
+      // be asked for the key: the welcome then goes without the headers, and
+      // the footer points at MAP's email preferences page instead, so the
+      // placeholder is never left empty.
+      const unsubscribeLink = await this.mapClient.unsubscribeLink(userId);
       // Exactly the placeholders `EMAIL_KINDS` declares for `welcome`.
       const vars = {
         firstName: firstName,
         streamsUrl: `${this.siteUrl}/streams`,
         alertsLine: alertsLine(emailAlerts),
+        unsubscribeUrl: unsubscribeLink ?? this.mapClient.emailPreferencesUrl,
         brandName: brand.name,
         homeUrl: brand.homeUrl,
         logoUrl: brand.logoUrl ?? null,
@@ -149,6 +156,9 @@ export class RegisterService {
         email:
           (await this.fileTemplates.render('welcome', vars)) ??
           welcomeEmail(brand, vars),
+        headers: unsubscribeLink
+          ? listUnsubscribeHeaders(unsubscribeLink)
+          : null,
       });
     } catch {
       // A welcome that could not be queued is not worth a failed signup.

@@ -23,18 +23,27 @@ export const OUTBOUND_KINDS = ['welcome', 'stream_announced', 'stream_reminder']
 export type OutboundKind = (typeof OUTBOUND_KINDS)[number];
 
 /**
- * The kinds a person can opt out of by removing this venture in MAP's portal
- * (`map_optouts`). Everything else is transactional — today only the
- * welcome — and goes regardless: it is about the account, not about hearing
- * from the venture. Keep this in step with `marketing` in `EMAIL_KINDS`.
+ * The opt-out-able kinds: mail that stops when the person unsubscribes from
+ * this brand (MAP's signed link in the footer and the `List-Unsubscribe`
+ * header) or removes this venture in MAP's portal — both arrive as
+ * `map_optouts`. "Marketing" here means exactly that, not "promotional".
+ *
+ * Only essential mail stays off this list (password resets, invitations,
+ * payment and moderation notices, contact-form notices), and this venture
+ * enqueues none of it — MAP sends its password reset — so every kind it
+ * queues is listed. Keep this in step with `marketing` in `EMAIL_KINDS`.
  */
-export const MARKETING_KINDS: readonly OutboundKind[] = ['stream_announced', 'stream_reminder'];
+export const MARKETING_KINDS: readonly OutboundKind[] = [
+  'welcome',
+  'stream_announced',
+  'stream_reminder',
+];
 
 /**
  * `logged` is terminal and means "`MAIL_ENABLED` was off, so this went to the
  * log instead". It is kept distinct from `sent` so that turning a venture's
  * mail on later never leaves anyone guessing which rows were really delivered.
- * `skipped` is terminal too: a marketing kind whose recipient had opted out at
+ * `skipped` is terminal too: an opt-out-able kind whose recipient had opted out at
  * MAP by the time the drain reached it (`last_error = 'map_opt_out'`).
  */
 export const OUTBOUND_STATUSES = [

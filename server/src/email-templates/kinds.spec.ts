@@ -2,6 +2,7 @@ import { MARKETING_KINDS, OUTBOUND_KINDS } from '../mail/outbound-email.entity';
 import {
   MAIL_BRAND_NAME,
   MAIL_HOME_URL,
+  MAIL_PREFERENCES_URL,
   mailBrand,
 } from '../mail/templates/brand';
 import { passwordResetEmail } from '../mail/templates/password-reset';
@@ -48,6 +49,52 @@ describe('EMAIL_KINDS', () => {
     }
   });
 
+  it('makes every kind opt-out-able except essential mail', () => {
+    const essential = [
+      'password_reset',
+      'complete_profile',
+      'member_invite',
+      'invite',
+      'family_invite',
+      'player_invite',
+      'payment_due',
+      'payment_paused',
+      'moderation_notice',
+      'contact_received',
+    ];
+    expect([...MARKETING_KINDS].sort()).toEqual(
+      EMAIL_KINDS.map((def) => def.kind)
+        .filter((name) => !essential.includes(name))
+        .sort(),
+    );
+    expect([...MARKETING_KINDS].sort()).toEqual([
+      'stream_announced',
+      'stream_reminder',
+      'welcome',
+    ]);
+  });
+
+  it('gives every opt-out-able kind the unsubscribe link, and essential ones the preferences link', () => {
+    for (const def of EMAIL_KINDS) {
+      const d = defaultRendering(def);
+      if (def.marketing) {
+        expect(def.placeholders).toContain('unsubscribeUrl');
+        expect(d.html).toContain('<a href="{{unsubscribeUrl}}"');
+        expect(d.text).toContain(
+          'Unsubscribe from {{brandName}}: {{unsubscribeUrl}}',
+        );
+        expect(d.html).not.toContain(MAIL_PREFERENCES_URL);
+      } else {
+        expect(def.placeholders).not.toContain('unsubscribeUrl');
+        expect(`${d.html}\n${d.text}`).not.toContain('{{unsubscribeUrl}}');
+        expect(d.html).toContain(`<a href="${MAIL_PREFERENCES_URL}"`);
+        expect(d.text).toContain(
+          `Manage email preferences: ${MAIL_PREFERENCES_URL}`,
+        );
+      }
+    }
+  });
+
   it('flags as marketing exactly the kinds the MAP opt-out check reads', () => {
     expect(
       EMAIL_KINDS.filter((def) => def.marketing)
@@ -65,6 +112,7 @@ describe('welcome', () => {
       'firstName',
       'streamsUrl',
       'alertsLine',
+      'unsubscribeUrl',
       'brandName',
       'homeUrl',
       'logoUrl',
@@ -78,6 +126,7 @@ describe('welcome', () => {
         firstName: `Ann <O'Neil> & co`,
         streamsUrl: 'https://example.test/streams?x=1&y=2',
         alertsLine: alertsLine(emailAlerts),
+        unsubscribeUrl: 'https://map.example.test/unsubscribe/a/b/c?x=1&y=2',
         ...brandVars,
       };
       expect(fill(welcome, vars)).toEqual(
@@ -95,7 +144,8 @@ describe('stream alerts', () => {
     gameLine: 'Playing Hades <II> & more.',
     whereLine: 'Watch on Twitch, Kick & "YouTube".',
     eventUrl: 'https://example.test/streams/1?a=1&b=2',
-    unsubscribeUrl: 'https://example.test/unsubscribe/tok?a=1&b=2',
+    unsubscribeUrl: 'https://map.example.test/unsubscribe/a/b/c?x=1&y=2',
+    stopAlertsUrl: 'https://example.test/unsubscribe/tok?a=1&b=2',
     lead: 'in 30 minutes',
     ...brandVars,
   };
@@ -110,6 +160,7 @@ describe('stream alerts', () => {
       'whereLine',
       'eventUrl',
       'unsubscribeUrl',
+      'stopAlertsUrl',
       'lead',
       'brandName',
       'homeUrl',
@@ -131,11 +182,15 @@ describe('stream alerts', () => {
     );
   });
 
-  it('the footer carries a working unsubscribe link in both halves', () => {
+  it('the footer carries both links in both halves', () => {
     for (const name of ['stream_announced', 'stream_reminder']) {
       const d = defaultRendering(kind(name));
       expect(d.html).toContain('<a href="{{unsubscribeUrl}}"');
-      expect(d.text).toContain('Unsubscribe: {{unsubscribeUrl}}');
+      expect(d.html).toContain('<a href="{{stopAlertsUrl}}"');
+      expect(d.text).toContain(
+        'Unsubscribe from {{brandName}}: {{unsubscribeUrl}}',
+      );
+      expect(d.text).toContain('Stop these alerts: {{stopAlertsUrl}}');
     }
   });
 });

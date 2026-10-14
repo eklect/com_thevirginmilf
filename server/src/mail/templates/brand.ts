@@ -93,6 +93,15 @@ export const MAIL_THEME: MailTheme = {
 export const MAIL_BRAND_NAME = 'The Virgin MILF';
 export const MAIL_HOME_URL = 'https://thevirginmilf.com';
 
+/**
+ * MAP's signed-in email preferences page, the footer link on essential mail
+ * (MAP's password reset here). A production literal like `MAIL_HOME_URL`, so
+ * the seeded file is the same wherever it is rendered; MAP's public origin
+ * is `https://map.mucciandco.com` in production.
+ */
+export const MAIL_PREFERENCES_URL =
+  'https://map.mucciandco.com/email-preferences';
+
 export const MAIL_ACCENT = MAIL_THEME.button.background;
 
 export function mailBrand(name: string, homeUrl: string): Brand {

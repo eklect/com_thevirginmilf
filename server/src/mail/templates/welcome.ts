@@ -1,4 +1,4 @@
-import { Brand, RenderedEmail, renderEmail } from './layout';
+import { Brand, RenderedEmail, renderEmail, unsubscribeFooter } from './layout';
 
 /** The sentence about stream alerts, worked out from the signup's choice. */
 export function alertsLine(emailAlerts: boolean): string {
@@ -16,7 +16,13 @@ export function alertsLine(emailAlerts: boolean): string {
  */
 export function welcomeEmail(
   brand: Brand,
-  args: { firstName: string; streamsUrl: string; alertsLine: string },
+  args: {
+    firstName: string;
+    streamsUrl: string;
+    alertsLine: string;
+    /** MAP's signed per-person link (`MapClientService.unsubscribeLink`). */
+    unsubscribeUrl: string;
+  },
 ): RenderedEmail {
   return renderEmail(brand, {
     subject: `Welcome to ${brand.name}`,
@@ -31,5 +37,6 @@ export function welcomeEmail(
     notes: [
       `If you did not create a ${brand.name} account, you can ignore this email — nothing further will be sent.`,
     ],
+    footerLinks: [unsubscribeFooter(brand, args.unsubscribeUrl)],
   });
 }

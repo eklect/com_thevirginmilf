@@ -7,6 +7,7 @@ import { gameTitle } from '../games/games.serializer';
 import { FileTemplateService } from '../email-templates/file-template.service';
 import { MailQueueService } from '../mail/mail-queue.service';
 import { MailConfig } from '../mail/mail.config';
+import { MapClientService } from '../map-client/map-client.service';
 import { mailBrand } from '../mail/templates/brand';
 import {
   StreamAlertArgs,
@@ -19,8 +20,8 @@ import { PushQueueService } from '../push/push-queue.service';
 import { PushSubscriptionsService } from '../push/push-subscriptions.service';
 import { SettingsService } from '../settings/settings.service';
 import { StreamEventEntity } from '../streams/stream-event.entity';
-import { SubscriberEntity } from '../subscribers/subscriber.entity';
 import { SubscribersService } from '../subscribers/subscribers.service';
+import { alertLinks } from './alert-links';
 import { formatLead, formatTime, formatWhen, resolveZone } from './when';
 
 const SWEEP_SCHEDULE = '* * * * *';
@@ -114,6 +115,7 @@ export class StreamAlertsScheduler implements OnApplicationBootstrap {
     private readonly pushQueue: PushQueueService,
     private readonly settings: SettingsService,
     private readonly mailConfig: MailConfig,
+    private readonly mapClient: MapClientService,
     config: ConfigService,
   ) {
     this.siteUrl = config
@@ -308,9 +310,20 @@ export class StreamAlertsScheduler implements OnApplicationBootstrap {
     const emails = await this.mailQueue.enqueue(
       await Promise.all(
         emailRecipients.map(async (subscriber) => {
+          // The key is fetched once and cached, so this is a local HMAC per
+          // subscriber after the first; null (no sub, or MAP unreachable)
+          // falls back to the list's own link.
+          const links = alertLinks(
+            this.siteUrl,
+            subscriber,
+            subscriber.userId
+              ? await this.mapClient.unsubscribeLink(subscriber.userId)
+              : null,
+          );
           const args: StreamAlertArgs = {
             ...base,
-            unsubscribeUrl: `${this.siteUrl}/unsubscribe/${subscriber.unsubscribeToken}`,
+            unsubscribeUrl: links.unsubscribeUrl,
+            stopAlertsUrl: links.stopAlertsUrl,
           };
           // Exactly the placeholders `EMAIL_KINDS` declares for both kinds.
           const vars = {
@@ -334,7 +347,7 @@ export class StreamAlertsScheduler implements OnApplicationBootstrap {
               (kind === 'stream_reminder'
                 ? streamReminderEmail(brand, vars)
                 : streamAnnouncedEmail(brand, vars)),
-            headers: unsubscribeHeaders(this.siteUrl, subscriber),
+            headers: links.headers,
           };
         }),
       ),
@@ -416,17 +429,4 @@ function leadMinutes(raw: string): number {
   const parsed = Number(raw.trim());
   if (!raw.trim() || !Number.isFinite(parsed)) return DEFAULT_LEAD_MINUTES;
   return Math.min(Math.max(Math.round(parsed), MIN_LEAD_MINUTES), MAX_LEAD_MINUTES);
-}
-
-/**
- * One-click unsubscribe (RFC 8058). The header points at the API's POST
- * route, which performs it; the link a person clicks in the body goes to the
- * page, which asks first. See `unsubscribe.controller.ts` for why a GET never
- * unsubscribes.
- */
-function unsubscribeHeaders(siteUrl: string, subscriber: SubscriberEntity): Record<string, string> {
-  return {
-    'List-Unsubscribe': `<${siteUrl}/api/unsubscribe/${subscriber.unsubscribeToken}>`,
-    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-  };
 }

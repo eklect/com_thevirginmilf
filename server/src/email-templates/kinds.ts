@@ -26,6 +26,10 @@ import type { EmailKindDef } from './email-kinds.types';
  *
  * `marketing` must agree with `MARKETING_KINDS` in `outbound-email.entity.ts`,
  * which is what the MAP opt-out check reads (asserted in `kinds.spec.ts`).
+ * It means "stops when the person unsubscribes from this brand": every kind
+ * but essential mail. An opt-out-able kind declares `unsubscribeUrl` (MAP's
+ * signed link, the "Unsubscribe from <Brand>" footer); an essential one — the
+ * password reset — carries the literal preferences link instead.
  *
  * The brand comes from `mailBrand`, the same helper the call sites use, and
  * the logo is its fixed production URL (`MAIL_LOGO_URL`), written into the
@@ -54,6 +58,7 @@ const STREAM_PLACEHOLDERS = [
   'whereLine',
   'eventUrl',
   'unsubscribeUrl',
+  'stopAlertsUrl',
   'lead',
   'brandName',
   'homeUrl',
@@ -68,34 +73,37 @@ const streamArgs = (vars: Record<string, string>) => ({
   whereLine: vars.whereLine,
   eventUrl: vars.eventUrl,
   unsubscribeUrl: vars.unsubscribeUrl,
+  stopAlertsUrl: vars.stopAlertsUrl,
 });
 
 export const EMAIL_KINDS: EmailKindDef[] = [
   {
     kind: 'welcome',
     description:
-      'Sent when someone creates an account. The alerts line says whether they chose to hear about streams.',
+      'Sent when someone creates an account. The alerts line says whether they chose to hear about streams. The unsubscribe link stops every email from this site except password resets.',
     // Exactly what `RegisterService.enqueueWelcome` passes to `render`.
     placeholders: [
       'firstName',
       'streamsUrl',
       'alertsLine',
+      'unsubscribeUrl',
       'brandName',
       'homeUrl',
       'logoUrl',
     ],
-    marketing: false,
+    marketing: true,
     render: (vars) =>
       welcomeEmail(brandFrom(vars), {
         firstName: vars.firstName,
         streamsUrl: vars.streamsUrl,
         alertsLine: vars.alertsLine,
+        unsubscribeUrl: vars.unsubscribeUrl,
       }),
   },
   {
     kind: 'stream_announced',
     description:
-      'Sent to everyone who asked for stream alerts when a stream is published to the calendar. The game line and the where-to-watch line are empty when the stream has no game or channel.',
+      'Sent to everyone who asked for stream alerts when a stream is published to the calendar. The game line and the where-to-watch line are empty when the stream has no game or channel. The footer has two links: one stops every email from this site, the other stops only stream alerts.',
     placeholders: STREAM_PLACEHOLDERS,
     marketing: true,
     render: (vars) => streamAnnouncedEmail(brandFrom(vars), streamArgs(vars)),
@@ -103,7 +111,7 @@ export const EMAIL_KINDS: EmailKindDef[] = [
   {
     kind: 'stream_reminder',
     description:
-      'Sent to everyone who asked for stream alerts shortly before a stream starts. The lead reads like "in 30 minutes".',
+      'Sent to everyone who asked for stream alerts shortly before a stream starts. The lead reads like "in 30 minutes". The footer has two links: one stops every email from this site, the other stops only stream alerts.',
     placeholders: STREAM_PLACEHOLDERS,
     marketing: true,
     render: (vars) =>
@@ -120,7 +128,8 @@ export const EMAIL_KINDS: EmailKindDef[] = [
     // Only these two: MAP also passes `brandName`, `sharedAccountLine`,
     // `homeUrl` and `logoUrl`, but `brandName` is the application's
     // registered name, not the brand, so the default writes the brand,
-    // address and logo out as literals.
+    // address and logo out as literals — and the footer's "Manage email
+    // preferences" link too, since this is essential mail.
     placeholders: ['email', 'resetUrl'],
     marketing: false,
     render: (vars) =>

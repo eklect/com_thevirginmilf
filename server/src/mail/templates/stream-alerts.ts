@@ -1,4 +1,4 @@
-import { Brand, RenderedEmail, renderEmail } from './layout';
+import { Brand, RenderedEmail, renderEmail, unsubscribeFooter } from './layout';
 
 /**
  * What both stream alerts are built from: the same plain strings the editable
@@ -16,8 +16,14 @@ export interface StreamAlertArgs {
   whereLine: string;
   /** The stream's page on this site. Signing in there shows the link. */
   eventUrl: string;
-  /** The unsubscribe PAGE, for the footer link a person clicks. */
+  /**
+   * "Unsubscribe from <Brand>": MAP's signed per-person link, which stops
+   * every opt-out-able email from this brand. For a subscriber with no MAP
+   * `sub` it is the same page as `stopAlertsUrl`, so it is always filled.
+   */
   unsubscribeUrl: string;
+  /** "Stop these alerts": this site's own unsubscribe PAGE for the list. */
+  stopAlertsUrl: string;
 }
 
 /** The "Playing …" sentence, or '' for a stream with no visible game. */
@@ -39,11 +45,14 @@ export function whereLine(channels: string[]): string {
  */
 const optional = (...lines: string[]) => lines.filter((line) => line);
 
-const shared = (args: StreamAlertArgs) => ({
+const shared = (brand: Brand, args: StreamAlertArgs) => ({
   eyebrow: 'Stream alert',
   cta: { label: 'Get the stream link', url: args.eventUrl },
   notes: ['You are getting this because you asked to hear about streams.'],
-  footerLink: { label: 'Unsubscribe', url: args.unsubscribeUrl },
+  footerLinks: [
+    unsubscribeFooter(brand, args.unsubscribeUrl),
+    { label: 'Stop these alerts', url: args.stopAlertsUrl },
+  ],
 });
 
 /** Sent once, when a stream is published to the calendar. */
@@ -59,7 +68,7 @@ export function streamAnnouncedEmail(
       `${args.streamerName} is going live on ${args.when}.`,
       ...optional(args.gameLine, args.whereLine),
     ],
-    ...shared(args),
+    ...shared(brand, args),
   });
 }
 
@@ -76,6 +85,6 @@ export function streamReminderEmail(
       `${args.title} starts on ${args.when}.`,
       ...optional(args.gameLine, args.whereLine),
     ],
-    ...shared(args),
+    ...shared(brand, args),
   });
 }

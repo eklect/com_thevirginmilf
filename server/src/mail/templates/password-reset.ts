@@ -1,4 +1,5 @@
-import { Brand, RenderedEmail, renderEmail } from './layout';
+import { MAIL_PREFERENCES_URL } from './brand';
+import { Brand, RenderedEmail, preferencesFooter, renderEmail } from './layout';
 
 /**
  * "Forgot password" — the link to choose a new one. SENT BY MAP, NOT BY THIS
@@ -31,6 +32,10 @@ export function passwordResetEmail(
       'This link expires in 1 hour and works once.',
       "If you didn't ask to reset your password, you can ignore this email — your password is unchanged.",
     ],
+    // Essential mail: nobody can unsubscribe from a reset, so the footer
+    // offers MAP's preferences page — a literal, since MAP fills only
+    // `email` and `resetUrl` here.
+    footerLinks: [preferencesFooter(MAIL_PREFERENCES_URL)],
   });
 }
 

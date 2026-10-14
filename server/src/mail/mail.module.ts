@@ -15,7 +15,7 @@ import { OutboundEmailEntity } from './outbound-email.entity';
  * one is a copy to the others. This copy differs in two more places:
  * `OUTBOUND_KINDS` carries the two stream alerts (and drops the unused
  * `password_reset` / `complete_profile`), and the layout has
- * a `footerLink` for their unsubscribe link. `MAIL_ENABLED` decides whether a venture's mail
+ * `footerLinks` for the unsubscribe and preferences links. `MAIL_ENABLED` decides whether a venture's mail
  * is live — see `MailConfig`.
  *
  * Global so any feature can enqueue without importing it. Features enqueue;

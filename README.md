@@ -189,11 +189,12 @@ five minutes and mirrors it into **`map_optouts`** (`user_id` = the MAP `sub`,
 
 1. **Selection** — `SubscribersService.listDeliverable()` and
    `PushSubscriptionsService.listAll()` leave those people out of a fan-out.
-2. **Delivery** — the mail drain skips a queued `stream_announced` / `stream_reminder`
-   (`MARKETING_KINDS` in `outbound-email.entity.ts`) whose `user_id` is opted out, and the
-   push drain skips every kind (every push is a stream alert). The row is marked
-   `status = 'skipped'`, `last_error = 'map_opt_out'`. The one transactional kind,
-   `welcome`, is never skipped.
+2. **Delivery** — the mail drain skips a queued opt-out-able kind (`MARKETING_KINDS` in
+   `outbound-email.entity.ts`: `welcome`, `stream_announced`, `stream_reminder` — every
+   kind this server queues) whose `user_id` is opted out, and the push drain skips every
+   kind (every push is a stream alert). The row is marked `status = 'skipped'`,
+   `last_error = 'map_opt_out'`. Essential mail is never skipped; this server queues none
+   (MAP sends its password reset).
 
 The opt-out is a veto, not a change: `subscribers.is_subscribed` and `push_subscriptions`
 stay exactly as the person set them, so re-installing the site (the row leaves the feed on
@@ -202,6 +203,32 @@ role needs `"installs:read"` in `service_scopes` in **both** `muccico_ecosystem`
 the scheduler warns once and keeps the last synced set; an error never empties the table.
 `map-client.service.ts` caches one service token **per scope**, so a venture not yet granted
 `installs:read` can still sign people up.
+
+**Unsubscribe from the brand.** The feed also carries everyone who unsubscribed from this
+site's brand at MAP, through the signed link every opt-out-able email carries:
+
+- **The link** is `MapClientService.unsubscribeLink(sub)` — MAP's
+  `https://map.mucciandco.com/unsubscribe/com-thevirginmilf/<sub>/<sig>`. The signing key is fetched
+  once per process from `GET /api/service/applications/me/unsubscribe-key` with its own
+  `unsubscribes:sign` token, kept in memory only, and every link is an HMAC computed here
+  (`map-client/unsubscribe-link.ts`; its spec pins MAP's worked example). Any failure —
+  scope not granted yet, MAP down — returns null with a warning and is not retried for five
+  minutes; the mail still goes, without the link or headers. The role needs
+  `"unsubscribes:sign"` in `service_scopes` in both manifests.
+- **The welcome** carries it as `{{unsubscribeUrl}}` ("Unsubscribe from <Brand>" in the
+  footer) and as `List-Unsubscribe: <link>` + `List-Unsubscribe-Post:
+  List-Unsubscribe=One-Click` in the row's `headers`. With no link the footer points at
+  MAP's `/email-preferences` instead and the headers are left off.
+- **Stream alerts** keep the list's own token as a second footer link, "Stop these
+  alerts" (`{{stopAlertsUrl}}`, which stops only stream email). For a subscriber with a MAP
+  `sub`, `{{unsubscribeUrl}}` and the `List-Unsubscribe` header are MAP's link; for one
+  without (or when MAP could not sign), both footer links are the list's page and the
+  header is the API's one-click route, `/api/unsubscribe/<token>`, as before
+  (`notifications/alert-links.ts`).
+- **Essential mail** — here only MAP's `password_reset` — has no unsubscribe link and no
+  headers; its footer says "Manage email preferences" and links to
+  `https://map.mucciandco.com/email-preferences` as a literal (`MAIL_PREFERENCES_URL` in
+  `brand.ts`).
 
 ### Push, and the one service worker in the estate
 
@@ -337,10 +364,10 @@ Every kind of mail this server sends is registered in
 passes to `FileTemplateService.render`. The live files in
 `muccico_email_templates/com_thevirginmilf/live/` use exactly these names.
 
-| Kind | Sent when | Marketing | Placeholders |
+| Kind | Sent when | Stops on unsubscribe | Placeholders |
 |---|---|---|---|
-| `welcome` | `RegisterService` — a signup by the form (`create`) or a provider button (`completeSocial`); once per `sub` | no | `firstName`, `streamsUrl`, `alertsLine`, `brandName`, `homeUrl`, `logoUrl` |
-| `stream_announced` | `StreamAlertsScheduler` — a published stream has settled for two minutes | yes | `streamerName`, `title`, `when`, `gameLine`, `whereLine`, `eventUrl`, `unsubscribeUrl`, `lead`, `brandName`, `homeUrl`, `logoUrl` |
+| `welcome` | `RegisterService` — a signup by the form (`create`) or a provider button (`completeSocial`); once per `sub` | yes | `firstName`, `streamsUrl`, `alertsLine`, `unsubscribeUrl`, `brandName`, `homeUrl`, `logoUrl` |
+| `stream_announced` | `StreamAlertsScheduler` — a published stream has settled for two minutes | yes | `streamerName`, `title`, `when`, `gameLine`, `whereLine`, `eventUrl`, `unsubscribeUrl`, `stopAlertsUrl`, `lead`, `brandName`, `homeUrl`, `logoUrl` |
 | `stream_reminder` | `StreamAlertsScheduler` — `reminder_lead_minutes` before the start | yes | the same as `stream_announced` |
 | `password_reset` | **Sent by MAP, not this server** — MAP renders it from this folder's `live/password_reset` for a reset asked for from this site; registered (`MAP_SENT_KINDS`) so the editor shows it and the seed writes it, and never enqueued here. Brand, address and logo are literals | no | `email`, `resetUrl` |
 
@@ -350,8 +377,11 @@ passes to `FileTemplateService.render`. The live files in
 `server/src/mail/templates/brand.ts`, over a layout (`layout.ts`) shared with the clone. `logoUrl` is
 the production logo, `https://thevirginmilf.com/brand/v1/logo.png`, and the defaults carry it as a literal rather
 than `{{logoUrl}}`, since a file template cannot branch on whether it is set. The
-marketing kinds are `MARKETING_KINDS`, so the MAP opt-out applies to them; `kinds.spec.ts`
-holds the two lists together, and checks that each default file, filled in, is the
+opt-out-able kinds ("marketing" in the registry, meaning "stops when the person unsubscribes
+from this brand", not "promotional") are `MARKETING_KINDS`, so the MAP opt-out applies to
+them; only essential mail is left off. `kinds.spec.ts` holds the two lists together, checks
+that every opt-out-able default carries `{{unsubscribeUrl}}` and the essential one the
+literal preferences link, and checks that each default file, filled in, is the
 TypeScript template byte for byte. There is no contact form, so no `contact_received`.
 
 - `GET /api/service/email-templates/kinds` (scope `email-templates:read`) returns each kind

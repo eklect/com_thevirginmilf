@@ -5,6 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { signUnsubscribeLink } from './unsubscribe-link';
 
 export type CreateMapUserInput = {
   email: string;
@@ -53,6 +54,13 @@ const RENEW_MARGIN_SECONDS = 60;
 /** The scopes this app asks MAP for, each cached as its own token. */
 export const PROVISION_SCOPE = 'users:provision';
 export const INSTALLS_READ_SCOPE = 'installs:read';
+export const UNSUBSCRIBES_SIGN_SCOPE = 'unsubscribes:sign';
+
+/** After a failed key fetch, how long to send without the link before asking again. */
+const KEY_RETRY_MS = 5 * 60_000;
+
+/** `GET /api/service/applications/me/unsubscribe-key`, as this app keeps it. */
+type UnsubscribeKey = { slug: string; keyHex: string; linkBase: string };
 
 /**
  * MAP refused this app the right it asked for: the scope is not granted, the
@@ -80,7 +88,8 @@ export class MapAccessDeniedError extends ServiceUnavailableException {
  * Authentication is the OAuth 2.0 `client_credentials` grant — the same `client_id` and
  * `client_secret` this app is registered with, exchanged at `/oauth/token` for a
  * short-lived bearer token. One token per scope: `users:provision` creates accounts at
- * signup, `installs:read` reads the opt-out feed. Asking for both in one token would
+ * signup, `installs:read` reads the opt-out feed, `unsubscribes:sign` fetches the key
+ * that signs the per-brand unsubscribe link. Asking for them in one token would
  * mean a venture not yet granted `installs:read` could not sign anybody up.
  *
  * > Previously this sent `x-api-key`/`x-api-secret` headers to `POST /users`. MAP was
@@ -96,6 +105,19 @@ export class MapClientService {
   private readonly clientId: string;
   private readonly clientSecret: string;
 
+  /** MAP's signed-in email preferences page, from `MAP_ISSUER` (the public origin). */
+  readonly emailPreferencesUrl: string;
+
+  /**
+   * The unsubscribe signing key, fetched once per process and kept in memory
+   * only — never logged, never written anywhere. `keyRequest` is the fetch in
+   * flight, so a fan-out of hundreds asks MAP once; `keyRetryAt` holds off
+   * after a failure (the route is throttled at 10 a minute).
+   */
+  private unsubscribeKey: UnsubscribeKey | null = null;
+  private keyRequest: Promise<UnsubscribeKey | null> | null = null;
+  private keyRetryAt = 0;
+
   /** One cached token per scope, each kept until shortly before it expires (15 minutes). */
   private readonly tokens = new Map<string, { token: string; expiresAt: number }>();
 
@@ -108,6 +130,77 @@ export class MapClientService {
       .replace(/\/+$/, '');
     this.clientId = config.getOrThrow<string>('MAP_CLIENT_ID');
     this.clientSecret = config.getOrThrow<string>('MAP_CLIENT_SECRET');
+    this.emailPreferencesUrl = `${config
+      .get<string>('MAP_ISSUER', 'https://map.mucciandco.com')
+      .replace(/\/+$/, '')}/email-preferences`;
+  }
+
+  /**
+   * MAP's signed "Unsubscribe from <Brand>" link for one person, or null.
+   *
+   * The key is fetched once with its own `unsubscribes:sign` token and every
+   * link is signed locally (`signUnsubscribeLink`). Null on ANY failure — no
+   * scope yet, MAP down, a malformed answer — with a warning, so the caller
+   * sends the mail without the link and headers rather than not at all.
+   * Essential mail never calls this.
+   */
+  async unsubscribeLink(sub: string): Promise<string | null> {
+    if (!sub) return null;
+    const key = this.unsubscribeKey ?? (await this.loadUnsubscribeKey());
+    return key ? signUnsubscribeLink(key, sub) : null;
+  }
+
+  private loadUnsubscribeKey(): Promise<UnsubscribeKey | null> {
+    if (Date.now() < this.keyRetryAt) return Promise.resolve(null);
+    this.keyRequest ??= this.fetchUnsubscribeKey().finally(() => {
+      this.keyRequest = null;
+    });
+    return this.keyRequest;
+  }
+
+  private async fetchUnsubscribeKey(): Promise<UnsubscribeKey | null> {
+    const path = '/api/service/applications/me/unsubscribe-key';
+    try {
+      let response = await this.get(path, UNSUBSCRIBES_SIGN_SCOPE);
+      if (response.status === 401) {
+        this.tokens.delete(UNSUBSCRIBES_SIGN_SCOPE);
+        response = await this.get(path, UNSUBSCRIBES_SIGN_SCOPE);
+      }
+      if (!response.ok) {
+        // An error body never carries the key, but keep it short anyway.
+        const detail = await response.text().catch(() => '');
+        throw new Error(`HTTP ${response.status} ${detail.slice(0, 200)}`);
+      }
+      const body = (await response.json()) as {
+        slug?: unknown;
+        key?: unknown;
+        linkBase?: unknown;
+      };
+      if (
+        typeof body.slug !== 'string' ||
+        !body.slug ||
+        typeof body.key !== 'string' ||
+        !/^[0-9a-f]{64}$/.test(body.key) ||
+        typeof body.linkBase !== 'string' ||
+        !body.linkBase
+      ) {
+        throw new Error('malformed response');
+      }
+      this.unsubscribeKey = {
+        slug: body.slug,
+        keyHex: body.key,
+        linkBase: body.linkBase,
+      };
+      return this.unsubscribeKey;
+    } catch (error) {
+      this.keyRetryAt = Date.now() + KEY_RETRY_MS;
+      this.logger.warn(
+        `MAP unsubscribe key unavailable; sending without unsubscribe links for now: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return null;
+    }
   }
 
   /**

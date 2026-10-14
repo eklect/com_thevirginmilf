@@ -148,11 +148,38 @@ export interface EmailContent {
   /** Small print under the button — expiry notices, "if this wasn't you". */
   notes?: string[];
   /**
-   * A real link in the footer — the unsubscribe link on a stream alert.
-   * `notes` cannot carry one: every paragraph is escaped, so a URL there
-   * renders as text nobody can click.
+   * Real links in the footer, after "Visit the site" — "Unsubscribe from
+   * <Brand>" on mail a person can opt out of, "Manage email preferences" on
+   * essential mail, and a stream alert's "Stop these alerts". `notes` cannot
+   * carry one: every paragraph is escaped, so a URL there renders as text
+   * nobody can click. Use `unsubscribeFooter` or `preferencesFooter`.
    */
-  footerLink?: { label: string; url: string };
+  footerLinks?: FooterLink[];
+}
+
+export interface FooterLink {
+  label: string;
+  url: string;
+}
+
+/**
+ * The footer link on mail a person can opt out of (`marketing: true` in
+ * `EMAIL_KINDS`): MAP's signed per-person link, which stops every
+ * opt-out-able email from this brand. `url` is the `unsubscribeUrl`
+ * placeholder's value, so the editable default carries `{{unsubscribeUrl}}`.
+ */
+export function unsubscribeFooter(brand: Brand, url: string): FooterLink {
+  return { label: `Unsubscribe from ${brand.name}`, url };
+}
+
+/**
+ * The footer link on essential mail — a password reset, an invitation —
+ * which nobody can unsubscribe from: MAP's signed-in email preferences page.
+ * `url` is a literal (`MAIL_PREFERENCES_URL`), never a placeholder, so the
+ * seeded file is the same wherever it is rendered.
+ */
+export function preferencesFooter(url: string): FooterLink {
+  return { label: 'Manage email preferences', url };
 }
 
 export interface RenderedEmail {
@@ -210,9 +237,10 @@ export function renderEmail(
     ...content.paragraphs.flatMap((p) => [p, '']),
     ...(content.cta ? [`${content.cta.label}: ${content.cta.url}`, ''] : []),
     ...(content.notes ?? []).flatMap((n) => [n, '']),
-    ...(content.footerLink
-      ? [`${content.footerLink.label}: ${content.footerLink.url}`, '']
-      : []),
+    ...(content.footerLinks ?? []).flatMap((link) => [
+      `${link.label}: ${link.url}`,
+      '',
+    ]),
     '—',
     brand.name,
     brand.homeUrl,
@@ -272,11 +300,14 @@ ${(content.notes ?? []).map((s) => p(s, `margin:0 0 12px;padding-top:16px;border
 ${stripeHtml(t)}
 <tr><td align="center" bgcolor="${t.footer.background}" style="background:${t.footer.background};padding:28px 40px 30px;border-radius:0 0 ${r}px ${r}px">
 <a href="${escapeHtml(brand.homeUrl)}" style="text-decoration:none;font-size:22px;line-height:1.2;color:${t.footer.text};${display}">${escapeHtml(brand.name)}</a>
-<p style="margin:12px 0 0;font-size:13px;line-height:1.6;color:${t.footer.muted};${body}"><a href="${escapeHtml(brand.homeUrl)}" style="color:${t.footer.link};text-decoration:underline">Visit the site</a>${
-    content.footerLink
-      ? ` &nbsp;&middot;&nbsp; <a href="${escapeHtml(content.footerLink.url)}" style="color:${t.footer.link};text-decoration:underline">${escapeHtml(content.footerLink.label)}</a>`
-      : ''
-  }</p>
+<p style="margin:12px 0 0;font-size:13px;line-height:1.6;color:${t.footer.muted};${body}"><a href="${escapeHtml(brand.homeUrl)}" style="color:${t.footer.link};text-decoration:underline">Visit the site</a>${(
+    content.footerLinks ?? []
+  )
+    .map(
+      (link) =>
+        ` &nbsp;&middot;&nbsp; <a href="${escapeHtml(link.url)}" style="color:${t.footer.link};text-decoration:underline">${escapeHtml(link.label)}</a>`,
+    )
+    .join('')}</p>
 </td></tr>
 </table>
 </td></tr></table>
