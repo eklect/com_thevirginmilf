@@ -32,12 +32,15 @@ export type MapUser = {
 
 /**
  * One page of `GET /api/service/applications/me/opt-outs`: every MAP user who
- * removed this application in the portal, ordered by `sub`. `next` is the
+ * removed this application in the portal or unsubscribed from its brand,
+ * ordered by `sub`. `removed` is the subset of this page's `subs` who REMOVED
+ * it (that stops push too; an unsubscribe stops only email). `next` is the
  * last `sub` on the page, to pass back as `after`, or null on the final page.
  */
 export type OptOutPage = {
   asOf: string;
   subs: string[];
+  removed: string[];
   next: string | null;
 };
 
@@ -277,11 +280,19 @@ export class MapClientService {
     }
 
     const body = (await response.json()) as Partial<OptOutPage>;
+    const subs = Array.isArray(body.subs)
+      ? body.subs.filter((sub): sub is string => typeof sub === 'string')
+      : [];
     return {
       asOf: typeof body.asOf === 'string' ? body.asOf : new Date().toISOString(),
-      subs: Array.isArray(body.subs)
-        ? body.subs.filter((sub): sub is string => typeof sub === 'string')
-        : [],
+      subs,
+      // A MAP older than the `removed` field says nothing about which are
+      // removals; read that as "all of them", so push stays vetoed for every
+      // opt-out exactly as before rather than reaching somebody who removed
+      // the site.
+      removed: Array.isArray(body.removed)
+        ? body.removed.filter((sub): sub is string => typeof sub === 'string')
+        : subs,
       next: typeof body.next === 'string' && body.next ? body.next : null,
     };
   }

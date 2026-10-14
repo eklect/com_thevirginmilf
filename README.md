@@ -185,7 +185,12 @@ from the corporate site at `/terms` and `/privacy`. This site links to them and 
 `sub` that removed the application at `GET /api/service/applications/me/opt-outs`
 (`client_credentials`, scope `installs:read`); `MapOptoutsScheduler` pages through it every
 five minutes and mirrors it into **`map_optouts`** (`user_id` = the MAP `sub`,
-`opted_out_at`, `synced_at`). Two checks use it:
+`opted_out_at`, `synced_at`, and `removed` — set from the feed's `removed` list, so it is 1
+for an App Directory removal and 0 for a brand unsubscribe). **A removal stops mail and push;
+an unsubscribe stops opt-out-able email only** — the mail vetoes read every row
+(`isOptedOut` / `optedOutSet`), the push vetoes only `removed = 1` (`isRemoved` /
+`removedSet`). A MAP older than the `removed` field is read as "every opt-out is a removal",
+so push stays vetoed for all of them until MAP is updated. Two checks use it:
 
 1. **Selection** — `SubscribersService.listDeliverable()` and
    `PushSubscriptionsService.listAll()` leave those people out of a fan-out.

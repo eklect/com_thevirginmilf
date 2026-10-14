@@ -111,8 +111,9 @@ export class PushQueueService {
     const batch = await this.repo.find({ where: { claimId }, relations: { subscription: true } });
     // Every push is a stream alert, so every row is subject to the MAP
     // opt-out — checked here as well as at the fan-out, because a person can
-    // remove the venture while the row waits. One read for the batch.
-    const vetoed = batch.length ? await this.optouts.optedOutSet() : new Set<string>();
+    // remove the venture while the row waits. Push is vetoed by a REMOVAL
+    // only: an email unsubscribe does not stop it. One read for the batch.
+    const vetoed = batch.length ? await this.optouts.removedSet() : new Set<string>();
     for (const row of batch) await this.deliver(row, vetoed);
     return batch.length;
   }

@@ -1,6 +1,9 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { MapAccessDeniedError, MapClientService } from '../map-client/map-client.service';
+import {
+  MapAccessDeniedError,
+  MapClientService,
+} from '../map-client/map-client.service';
 import { MapOptoutsService } from './map-optouts.service';
 
 const SYNC_SCHEDULE = '*/5 * * * *';
@@ -9,7 +12,9 @@ const SYNC_SCHEDULE = '*/5 * * * *';
 const MAX_PAGES = 100;
 
 /**
- * Mirrors MAP's opt-out feed into `map_optouts` every five minutes.
+ * Mirrors MAP's opt-out feed into `map_optouts` every five minutes, with
+ * each row's `removed` flag from the feed's `removed` list (removal vs. a
+ * brand unsubscribe — see `MapOptoutsService`).
  *
  * The feed is the whole list each time (ordered by `sub`, paged by `after`),
  * so a sync is a reconciliation: what MAP lists is what the table holds when
@@ -50,11 +55,13 @@ export class MapOptoutsScheduler implements OnApplicationBootstrap {
     this.running = true;
     try {
       const subs: string[] = [];
+      const removedSubs: string[] = [];
       let asOf: Date | null = null;
       let after: string | null = null;
       for (let page = 0; page < MAX_PAGES; page += 1) {
         const result = await this.mapClient.listOptOuts(after);
         subs.push(...result.subs);
+        removedSubs.push(...result.removed);
         asOf ??= new Date(result.asOf);
         after = result.next;
         if (!after) break;
@@ -67,10 +74,15 @@ export class MapOptoutsScheduler implements OnApplicationBootstrap {
       }
 
       const stamp = asOf && !Number.isNaN(asOf.getTime()) ? asOf : new Date();
-      const { added, removed, total } = await this.optouts.replaceAll(subs, stamp);
-      if (added || removed) {
+      const { added, removed, flagged, total } = await this.optouts.replaceAll(
+        subs,
+        stamp,
+        removedSubs,
+      );
+      if (added || removed || flagged) {
         this.logger.log(
-          `MAP opt-outs synced: ${total} total (+${added} / -${removed}).`,
+          `MAP opt-outs synced: ${total} total, ${new Set(removedSubs).size} removed ` +
+            `(+${added} / -${removed} / ${flagged} reflagged).`,
         );
       }
       this.deniedWarned = false;

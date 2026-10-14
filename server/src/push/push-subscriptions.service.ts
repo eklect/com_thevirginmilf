@@ -107,12 +107,14 @@ export class PushSubscriptionsService {
   /**
    * Every browser an alert should go to — less the people who removed this
    * venture in MAP's portal. Their rows stay: the opt-out is a veto, and a
-   * re-install resumes the devices they had switched on.
+   * re-install resumes the devices they had switched on. Only a REMOVAL
+   * vetoes push; somebody who unsubscribed from the brand's email still
+   * gets the notifications they switched on.
    */
   async listAll(): Promise<PushSubscriptionEntity[]> {
     const [rows, vetoed] = await Promise.all([
       this.repo.find({ order: { createdAt: 'ASC' } }),
-      this.optouts.optedOutSet(),
+      this.optouts.removedSet(),
     ]);
     return rows.filter((row) => !vetoed.has(row.userId));
   }
