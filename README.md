@@ -345,8 +345,10 @@ passes to `FileTemplateService.render`. The live files in
 
 `alertsLine`, `gameLine` and `whereLine` are whole sentences worked out by the server
 (`alertsLine`, `gameLine`, `whereLine` in `server/src/mail/templates/`); `gameLine` and
-`whereLine` are empty when a stream has no visible game or published channel. `logoUrl` is
-always empty — mail draws the site name as a wordmark (`mail/templates/brand.ts`). The
+`whereLine` are empty when a stream has no visible game or published channel. Mail is drawn in the site's own colours, faces and logo — the whole look is the `MAIL_THEME` in
+`server/src/mail/templates/brand.ts`, over a layout (`layout.ts`) shared with the clone. `logoUrl` is
+the production logo, `https://thevirginmilf.com/brand/v1/logo.png`, and the defaults carry it as a literal rather
+than `{{logoUrl}}`, since a file template cannot branch on whether it is set. The
 marketing kinds are `MARKETING_KINDS`, so the MAP opt-out applies to them; `kinds.spec.ts`
 holds the two lists together, and checks that each default file, filled in, is the
 TypeScript template byte for byte. There is no contact form, so no `contact_received`.

@@ -40,13 +40,17 @@ export function whereLine(channels: string[]): string {
 const optional = (...lines: string[]) => lines.filter((line) => line);
 
 const shared = (args: StreamAlertArgs) => ({
+  eyebrow: 'Stream alert',
   cta: { label: 'Get the stream link', url: args.eventUrl },
   notes: ['You are getting this because you asked to hear about streams.'],
   footerLink: { label: 'Unsubscribe', url: args.unsubscribeUrl },
 });
 
 /** Sent once, when a stream is published to the calendar. */
-export function streamAnnouncedEmail(brand: Brand, args: StreamAlertArgs): RenderedEmail {
+export function streamAnnouncedEmail(
+  brand: Brand,
+  args: StreamAlertArgs,
+): RenderedEmail {
   return renderEmail(brand, {
     subject: `New stream: ${args.title}`,
     preheader: args.when,
@@ -68,7 +72,10 @@ export function streamReminderEmail(
     subject: `Going live ${args.lead}: ${args.title}`,
     preheader: args.when,
     heading: `Going live ${args.lead}`,
-    paragraphs: [`${args.title} starts on ${args.when}.`, ...optional(args.gameLine, args.whereLine)],
+    paragraphs: [
+      `${args.title} starts on ${args.when}.`,
+      ...optional(args.gameLine, args.whereLine),
+    ],
     ...shared(args),
   });
 }

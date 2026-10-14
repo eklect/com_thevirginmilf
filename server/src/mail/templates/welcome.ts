@@ -21,8 +21,12 @@ export function welcomeEmail(
   return renderEmail(brand, {
     subject: `Welcome to ${brand.name}`,
     preheader: 'Your account is ready.',
+    eyebrow: 'Welcome',
     heading: `Welcome, ${args.firstName}.`,
-    paragraphs: [`Your ${brand.name} account is set up and ready to use.`, args.alertsLine],
+    paragraphs: [
+      `Your ${brand.name} account is set up and ready to use.`,
+      args.alertsLine,
+    ],
     cta: { label: 'See the stream schedule', url: args.streamsUrl },
     notes: [
       `If you did not create a ${brand.name} account, you can ignore this email — nothing further will be sent.`,

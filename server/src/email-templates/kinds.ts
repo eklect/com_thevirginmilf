@@ -1,5 +1,8 @@
 import { mailBrand } from '../mail/templates/brand';
-import { streamAnnouncedEmail, streamReminderEmail } from '../mail/templates/stream-alerts';
+import {
+  streamAnnouncedEmail,
+  streamReminderEmail,
+} from '../mail/templates/stream-alerts';
 import { welcomeEmail } from '../mail/templates/welcome';
 import type { EmailKindDef } from './email-kinds.types';
 
@@ -19,11 +22,14 @@ import type { EmailKindDef } from './email-kinds.types';
  * `marketing` must agree with `MARKETING_KINDS` in `outbound-email.entity.ts`,
  * which is what the MAP opt-out check reads (asserted in `kinds.spec.ts`).
  *
- * The brand comes from `mailBrand`, the same helper the call sites use: this
- * venture's mail has no logo, so the defaults draw the wordmark; `logoUrl` is
- * still passed at send time and an editor can add `<img src="{{logoUrl}}">`.
+ * The brand comes from `mailBrand`, the same helper the call sites use, and
+ * the logo is its fixed production URL (`MAIL_LOGO_URL`), written into the
+ * defaults as a literal — not `{{logoUrl}}`, which the layout cannot branch
+ * on. `logoUrl` is still passed at send time, carrying that same URL, for an
+ * editor who wants it.
  */
-const brandFrom = (vars: Record<string, string>) => mailBrand(vars.brandName, vars.homeUrl);
+const brandFrom = (vars: Record<string, string>) =>
+  mailBrand(vars.brandName, vars.homeUrl);
 
 /** What `StreamAlertsScheduler.fanOut` passes for both stream alerts. */
 const STREAM_PLACEHOLDERS = [
@@ -56,7 +62,14 @@ export const EMAIL_KINDS: EmailKindDef[] = [
     description:
       'Sent when someone creates an account. The alerts line says whether they chose to hear about streams.',
     // Exactly what `RegisterService.enqueueWelcome` passes to `render`.
-    placeholders: ['firstName', 'streamsUrl', 'alertsLine', 'brandName', 'homeUrl', 'logoUrl'],
+    placeholders: [
+      'firstName',
+      'streamsUrl',
+      'alertsLine',
+      'brandName',
+      'homeUrl',
+      'logoUrl',
+    ],
     marketing: false,
     render: (vars) =>
       welcomeEmail(brandFrom(vars), {
@@ -80,6 +93,9 @@ export const EMAIL_KINDS: EmailKindDef[] = [
     placeholders: STREAM_PLACEHOLDERS,
     marketing: true,
     render: (vars) =>
-      streamReminderEmail(brandFrom(vars), { ...streamArgs(vars), lead: vars.lead }),
+      streamReminderEmail(brandFrom(vars), {
+        ...streamArgs(vars),
+        lead: vars.lead,
+      }),
   },
 ];
