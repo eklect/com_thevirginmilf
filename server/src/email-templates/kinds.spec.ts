@@ -1,14 +1,23 @@
 import { MARKETING_KINDS, OUTBOUND_KINDS } from '../mail/outbound-email.entity';
-import { mailBrand } from '../mail/templates/brand';
-import { streamAnnouncedEmail, streamReminderEmail } from '../mail/templates/stream-alerts';
+import {
+  MAIL_BRAND_NAME,
+  MAIL_HOME_URL,
+  mailBrand,
+} from '../mail/templates/brand';
+import { passwordResetEmail } from '../mail/templates/password-reset';
+import {
+  streamAnnouncedEmail,
+  streamReminderEmail,
+} from '../mail/templates/stream-alerts';
 import { alertsLine, welcomeEmail } from '../mail/templates/welcome';
-import { defaultRendering } from './email-kinds';
+import { defaultRendering, placeholdersIn } from './email-kinds';
 import type { EmailKindDef } from './email-kinds.types';
 import { substitute } from './file-template.service';
-import { EMAIL_KINDS } from './kinds';
+import { EMAIL_KINDS, MAP_SENT_KINDS } from './kinds';
 
 // VENTURE-SPECIFIC — the checks on this repo's own list.
-const kind = (name: string): EmailKindDef => EMAIL_KINDS.find((def) => def.kind === name)!;
+const kind = (name: string): EmailKindDef =>
+  EMAIL_KINDS.find((def) => def.kind === name)!;
 
 /** The default file pair, filled in as `FileTemplateService.render` would. */
 function fill(def: EmailKindDef, vars: Record<string, string>) {
@@ -27,8 +36,16 @@ const brandVars = {
 };
 
 describe('EMAIL_KINDS', () => {
-  it('lists exactly the kinds the queue can carry', () => {
-    expect(EMAIL_KINDS.map((def) => def.kind).sort()).toEqual([...OUTBOUND_KINDS].sort());
+  it('lists exactly the kinds the queue can carry, plus the ones MAP sends', () => {
+    expect(EMAIL_KINDS.map((def) => def.kind).sort()).toEqual(
+      [...OUTBOUND_KINDS, ...MAP_SENT_KINDS].sort(),
+    );
+  });
+
+  it('keeps the kinds MAP sends out of the queue', () => {
+    for (const name of MAP_SENT_KINDS) {
+      expect(OUTBOUND_KINDS as readonly string[]).not.toContain(name);
+    }
   });
 
   it('flags as marketing exactly the kinds the MAP opt-out check reads', () => {
@@ -103,11 +120,15 @@ describe('stream alerts', () => {
   });
 
   it('stream_announced default, filled in, is the TypeScript template byte for byte', () => {
-    expect(fill(kind('stream_announced'), vars)).toEqual(streamAnnouncedEmail(brand, vars));
+    expect(fill(kind('stream_announced'), vars)).toEqual(
+      streamAnnouncedEmail(brand, vars),
+    );
   });
 
   it('stream_reminder default, filled in, is the TypeScript template byte for byte', () => {
-    expect(fill(kind('stream_reminder'), vars)).toEqual(streamReminderEmail(brand, vars));
+    expect(fill(kind('stream_reminder'), vars)).toEqual(
+      streamReminderEmail(brand, vars),
+    );
   });
 
   it('the footer carries a working unsubscribe link in both halves', () => {
@@ -116,5 +137,45 @@ describe('stream alerts', () => {
       expect(d.html).toContain('<a href="{{unsubscribeUrl}}"');
       expect(d.text).toContain('Unsubscribe: {{unsubscribeUrl}}');
     }
+  });
+});
+
+describe('password_reset (sent by MAP)', () => {
+  const reset = kind('password_reset');
+  const brand = mailBrand(MAIL_BRAND_NAME, MAIL_HOME_URL);
+
+  it('the default, filled in, is the TypeScript template byte for byte', () => {
+    const vars = {
+      email: `ann+<o'neil>@example.test`,
+      resetUrl: 'https://map.example.test/reset?token=a&b="c"',
+    };
+    expect(fill(reset, vars)).toEqual(passwordResetEmail(brand, vars));
+  });
+
+  it('uses only email and resetUrl, so MAP never skips it', () => {
+    expect(reset.placeholders).toEqual(['email', 'resetUrl']);
+    const d = defaultRendering(reset);
+    expect(placeholdersIn(`${d.html}\n${d.text}`).sort()).toEqual([
+      'email',
+      'resetUrl',
+    ]);
+    expect(d.html).not.toMatch(
+      /\{\{\s*(brandName|sharedAccountLine|homeUrl|logoUrl)/,
+    );
+  });
+
+  it('carries a <title>, which MAP reads the subject from', () => {
+    const d = defaultRendering(reset);
+    expect(d.html).toContain(
+      `<title>Reset your password for ${MAIL_BRAND_NAME.replace(/&/g, '&amp;')}</title>`,
+    );
+  });
+
+  it('writes the brand and the shared-account sentence out as literals', () => {
+    const d = defaultRendering(reset);
+    expect(d.text.startsWith(`${MAIL_BRAND_NAME} · Password reset`)).toBe(true);
+    expect(d.text).toContain(
+      `${MAIL_BRAND_NAME} signs you in with a Mucci & Co account, so the new password works on every Mucci & Co site you use.`,
+    );
   });
 });

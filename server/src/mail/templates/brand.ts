@@ -83,6 +83,16 @@ export const MAIL_THEME: MailTheme = {
     'https://fonts.googleapis.com/css2?family=Anton&amp;family=Archivo:wght@800&amp;family=Inter:wght@400;600&amp;display=swap',
 };
 
+/**
+ * The site's name and address as literals, for the one message this backend
+ * never sends itself: MAP's password reset, rendered from this venture's
+ * `live/password_reset` file. MAP fills `{{brandName}}` from the
+ * application's registered name, which is not always the brand, so that file
+ * writes the brand out instead.
+ */
+export const MAIL_BRAND_NAME = 'The Virgin MILF';
+export const MAIL_HOME_URL = 'https://thevirginmilf.com';
+
 export const MAIL_ACCENT = MAIL_THEME.button.background;
 
 export function mailBrand(name: string, homeUrl: string): Brand {

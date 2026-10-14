@@ -342,6 +342,7 @@ passes to `FileTemplateService.render`. The live files in
 | `welcome` | `RegisterService` — a signup by the form (`create`) or a provider button (`completeSocial`); once per `sub` | no | `firstName`, `streamsUrl`, `alertsLine`, `brandName`, `homeUrl`, `logoUrl` |
 | `stream_announced` | `StreamAlertsScheduler` — a published stream has settled for two minutes | yes | `streamerName`, `title`, `when`, `gameLine`, `whereLine`, `eventUrl`, `unsubscribeUrl`, `lead`, `brandName`, `homeUrl`, `logoUrl` |
 | `stream_reminder` | `StreamAlertsScheduler` — `reminder_lead_minutes` before the start | yes | the same as `stream_announced` |
+| `password_reset` | **Sent by MAP, not this server** — MAP renders it from this folder's `live/password_reset` for a reset asked for from this site; registered (`MAP_SENT_KINDS`) so the editor shows it and the seed writes it, and never enqueued here. Brand, address and logo are literals | no | `email`, `resetUrl` |
 
 `alertsLine`, `gameLine` and `whereLine` are whole sentences worked out by the server
 (`alertsLine`, `gameLine`, `whereLine` in `server/src/mail/templates/`); `gameLine` and

@@ -1,4 +1,9 @@
-import { mailBrand } from '../mail/templates/brand';
+import {
+  MAIL_BRAND_NAME,
+  MAIL_HOME_URL,
+  mailBrand,
+} from '../mail/templates/brand';
+import { passwordResetEmail } from '../mail/templates/password-reset';
 import {
   streamAnnouncedEmail,
   streamReminderEmail,
@@ -28,6 +33,15 @@ import type { EmailKindDef } from './email-kinds.types';
  * on. `logoUrl` is still passed at send time, carrying that same URL, for an
  * editor who wants it.
  */
+/**
+ * Kinds registered here that this backend never sends: MAP sends them, from
+ * this venture's folder in the templates repo, for a person who came from
+ * this site. They are listed so the editor shows them and the seed writes
+ * them, and they are not in `OUTBOUND_KINDS`, since the queue never carries
+ * them (`kinds.spec.ts` holds the two lists together on that basis).
+ */
+export const MAP_SENT_KINDS = ['password_reset'] as const;
+
 const brandFrom = (vars: Record<string, string>) =>
   mailBrand(vars.brandName, vars.homeUrl);
 
@@ -96,6 +110,23 @@ export const EMAIL_KINDS: EmailKindDef[] = [
       streamReminderEmail(brandFrom(vars), {
         ...streamArgs(vars),
         lead: vars.lead,
+      }),
+  },
+  {
+    // Sent by MAP, not by this backend — see `MAP_SENT_KINDS`.
+    kind: 'password_reset',
+    description:
+      'Sent by Mucci & Co sign-in when someone resets their password from this site. The link expires in one hour and works once.',
+    // Only these two: MAP also passes `brandName`, `sharedAccountLine`,
+    // `homeUrl` and `logoUrl`, but `brandName` is the application's
+    // registered name, not the brand, so the default writes the brand,
+    // address and logo out as literals.
+    placeholders: ['email', 'resetUrl'],
+    marketing: false,
+    render: (vars) =>
+      passwordResetEmail(mailBrand(MAIL_BRAND_NAME, MAIL_HOME_URL), {
+        email: vars.email,
+        resetUrl: vars.resetUrl,
       }),
   },
 ];
