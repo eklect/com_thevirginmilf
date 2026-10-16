@@ -84,7 +84,7 @@ async function save() {
     </div>
     <div>
       <label for="description" class="kicker block">Description (optional)</label>
-      <textarea id="description" v-model="form.description" rows="3" maxlength="500" class="input mt-1.5"></textarea>
+      <textarea id="description" v-model="form.description" rows="3" class="input mt-1.5"></textarea>
     </div>
     <label class="flex cursor-pointer items-center gap-2.5 text-sm">
       <input v-model="form.isPublished" type="checkbox" class="size-4 accent-[var(--accent)]" /> Published

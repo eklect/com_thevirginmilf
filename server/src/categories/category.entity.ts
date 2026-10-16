@@ -27,7 +27,7 @@ export class CategoryEntity {
   @Column({ type: 'varchar', length: 80 })
   name!: string;
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
+  @Column({ type: 'mediumtext', nullable: true })
   description!: string | null;
 
   @Column({ name: 'sort_order', type: 'int', default: 0 })

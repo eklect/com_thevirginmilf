@@ -286,7 +286,6 @@ function moveShot(index: number, direction: -1 | 1) {
           id="summary"
           v-model="form.summary"
           rows="3"
-          maxlength="600"
           :placeholder="game?.steam.summary ?? ''"
           class="input mt-1.5"
         ></textarea>

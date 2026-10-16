@@ -73,7 +73,7 @@ export class GameEntity {
   @Column({ type: 'varchar', length: 200, nullable: true })
   title!: string | null;
 
-  @Column({ type: 'varchar', length: 600, nullable: true })
+  @Column({ type: 'mediumtext', nullable: true })
   summary!: string | null;
 
   /** Markdown — her own notes about the game, above the reviews. */

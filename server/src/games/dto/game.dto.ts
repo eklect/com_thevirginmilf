@@ -24,9 +24,9 @@ export class CreateGameDto {
 
   @IsOptional() @Transform(trimToNull) @IsString() @MaxLength(60) platformLabel?: string | null;
 
-  @IsOptional() @Transform(trimToNull) @IsString() @MaxLength(600) summary?: string | null;
+  @IsOptional() @Transform(trimToNull) @IsString() summary?: string | null;
 
-  @IsOptional() @Transform(trimToNull) @IsString() @MaxLength(60_000) description?: string | null;
+  @IsOptional() @Transform(trimToNull) @IsString() description?: string | null;
 
   @IsOptional() @Transform(trimToNull) @IsString() @MaxLength(200) developer?: string | null;
 
@@ -59,9 +59,9 @@ export class UpdateGameDto {
 
   @IsOptional() @Transform(trimToNull) @IsString() @MaxLength(60) platformLabel?: string | null;
 
-  @IsOptional() @Transform(trimToNull) @IsString() @MaxLength(600) summary?: string | null;
+  @IsOptional() @Transform(trimToNull) @IsString() summary?: string | null;
 
-  @IsOptional() @Transform(trimToNull) @IsString() @MaxLength(60_000) description?: string | null;
+  @IsOptional() @Transform(trimToNull) @IsString() description?: string | null;
 
   @IsOptional() @Transform(trimToNull) @IsString() @MaxLength(200) developer?: string | null;
 

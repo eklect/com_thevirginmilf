@@ -45,7 +45,7 @@ export class StreamEventEntity {
    * stream link belongs on a channel, which is what the sign-in gate covers;
    * a URL pasted here is visible to the whole internet.
    */
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'mediumtext', nullable: true })
   description!: string | null;
 
   @Column({ name: 'starts_at', type: 'datetime' })

@@ -28,7 +28,7 @@ export class StreamChannelDto {
 export class CreateStreamDto {
   @Transform(trim) @IsString() @MinLength(1) @MaxLength(200) title!: string;
 
-  @IsOptional() @Transform(trimToNull) @IsString() @MaxLength(20_000) description?: string | null;
+  @IsOptional() @Transform(trimToNull) @IsString() description?: string | null;
 
   @IsISO8601() startsAt!: string;
 

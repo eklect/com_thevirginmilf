@@ -14,7 +14,7 @@ export class CreateReviewDto {
   @Transform(trim) @IsString() @MinLength(1) @MaxLength(200) title!: string;
 
   /** Markdown source. */
-  @IsString() @MaxLength(200_000) body!: string;
+  @IsString() body!: string;
 
   @IsOptional() @IsBoolean() isPublished?: boolean;
 

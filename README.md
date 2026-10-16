@@ -258,7 +258,25 @@ Steam form's field is `steamProfile`. When an admin write returns 403 with no JS
 rule id is in `/var/log/modsec_audit/audit.log` in the container.
 
 Every prose-writing route is under `/admin/`, which is what the manifest's
-`markdown_content: true` exclusion covers.
+`markdown_content: true` exclusion covers. That exclusion also takes rule 921110 (HTTP
+Request Smuggling) off the prose fields: it read a review line like "Put down." — a line
+break, an HTTP verb, one word, a line break — as a smuggled request, and refused the save
+with a bare 403 (Oct 2026). The generator is `muccico_ecosystem/scripts/modsec-venture-exclusions.sh`,
+and a new prose field name goes on its `MARKDOWN_ARGS` list.
+
+### Long-form text has no length cap
+
+No prose field is capped by length: a review's body, a game's summary and description, a
+stream's description and a category's description. The DTOs carry no `@MaxLength` on them,
+the admin forms no `maxlength`, and every column behind them is `mediumtext` (16 MiB), so
+the database never refuses what the API accepted (`1791400000000-UncapProse`). Short fields
+keep their caps — titles, names, slugs, URLs, labels — because they sit in headings, URLs
+and indexes.
+
+The one bound left is the size of the request: 512 KB of JSON, about half a million
+characters, set twice to agree — the JSON parser in `applyAppPipeline` and ModSecurity's
+`SecRequestBodyNoFilesLimit`, which is image-wide. A new long-form field follows the same
+rule: no `@MaxLength`, no `maxlength`, a `mediumtext` column.
 
 ### Date and time fields
 

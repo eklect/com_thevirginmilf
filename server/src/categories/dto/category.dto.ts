@@ -22,7 +22,7 @@ export class CreateCategoryDto {
   })
   slug?: string;
 
-  @IsOptional() @Transform(trimToNull) @IsString() @MaxLength(500) description?: string | null;
+  @IsOptional() @Transform(trimToNull) @IsString() description?: string | null;
 
   @IsOptional() @IsBoolean() isPublished?: boolean;
 
