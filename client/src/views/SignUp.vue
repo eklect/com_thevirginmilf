@@ -36,17 +36,11 @@ const created = ref(false);
 onMounted(() => void auth.loadProviders());
 
 /**
- * The provider buttons wait on the same two things as the submit button — the
- * Terms box and the fields the server will insist on — and skip the password,
- * which the provider stands in for.
+ * The provider buttons wait on the Terms box and on whatever no provider can
+ * supply — but not on the name or email: the provider asserts those, and the
+ * callback takes them from MAP's claims when the form leaves them blank.
  */
-const socialReady = computed(
-  () =>
-    termsAccepted.value &&
-    firstName.value.trim() !== '' &&
-    lastName.value.trim() !== '' &&
-    email.value.trim() !== '',
-);
+const socialReady = computed(() => termsAccepted.value);
 
 /**
  * The account is created at MAP by this site's server, over the service plane.
@@ -209,9 +203,6 @@ async function signUpWith(provider: ProviderInfo['key']) {
             verb="Sign up"
             @pick="signUpWith"
           />
-          <p v-if="termsAccepted && !socialReady" class="mt-3 text-xs text-muted">
-            Fill in your name and email first.
-          </p>
         </template>
 
         <p class="kicker mt-8 text-center">
