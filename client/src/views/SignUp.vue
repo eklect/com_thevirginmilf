@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { api, errorMessage } from '../api/client';
 import type { ProviderInfo } from '../api/social';
@@ -36,13 +36,6 @@ const created = ref(false);
 onMounted(() => void auth.loadProviders());
 
 /**
- * The provider buttons wait on the Terms box and on whatever no provider can
- * supply — but not on the name or email: the provider asserts those, and the
- * callback takes them from MAP's claims when the form leaves them blank.
- */
-const socialReady = computed(() => termsAccepted.value);
-
-/**
  * The account is created at MAP by this site's server, over the service plane.
  * Nothing comes back but `ok` — the next step is the ordinary sign-in trip to
  * MAP, which is where a session comes from. It lands on the account page, so
@@ -77,7 +70,6 @@ async function submit() {
  * account, and the callback here finishes the signup with the saved fields.
  */
 async function signUpWith(provider: ProviderInfo['key']) {
-  if (!socialReady.value) return;
   error.value = '';
   busy.value = true;
   try {
@@ -194,12 +186,12 @@ async function signUpWith(provider: ProviderInfo['key']) {
         </form>
 
         <!-- The other way in: the same form, a provider instead of a password.
-             The box above gates these too. -->
+             The box above does not gate these — MAP asks on /accept-terms. -->
         <template v-if="!created && auth.providers.length">
           <SocialDivider>or sign up with</SocialDivider>
           <SocialButtons
             :providers="auth.providers"
-            :disabled="busy || !socialReady"
+            :disabled="busy"
             verb="Sign up"
             @pick="signUpWith"
           />

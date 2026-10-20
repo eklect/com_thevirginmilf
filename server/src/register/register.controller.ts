@@ -55,9 +55,12 @@ export class RegisterController {
    * Nothing is created here. The fields are sealed into the OAuth transaction
    * cookie and the browser is sent to MAP, which signs the person in through the
    * provider — creating the identity on a first visit — and comes back through
-   * `/auth/callback`, where `RegisterService.completeSocial` does the rest. The
-   * Terms box must be ticked, exactly as for the form; MAP records the
-   * acceptance against the new account with this site as the application.
+   * `/auth/callback`, where `RegisterService.completeSocial` does the rest.
+   * The Terms box is optional here, unlike the form. Unticked, MAP creates the
+   * account and its authorize gate sends the person to /accept-terms before any
+   * code reaches this site, which is what makes a provider button a one-click
+   * signup. Ticked, MAP records the acceptance against the new account with this
+   * site as the application.
    */
   @Post('social')
   @HttpCode(HttpStatus.OK)
@@ -70,7 +73,7 @@ export class RegisterController {
       origin: originOf(request),
       returnTo: this.registerService.socialReturnTo(),
       provider: dto.provider,
-      termsAccepted: true,
+      termsAccepted: dto.termsAccepted,
       pendingSignup: this.registerService.pendingFrom(dto),
     });
     return { redirectTo };

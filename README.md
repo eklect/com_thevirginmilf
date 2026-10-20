@@ -235,6 +235,28 @@ site's brand at MAP, through the signed link every opt-out-able email carries:
   `https://map.mucciandco.com/email-preferences` as a literal (`MAIL_PREFERENCES_URL` in
   `brand.ts`).
 
+### Social signup — one click, the Terms agreed at MAP
+
+The provider buttons under the signup form (`client/src/views/SignUp.vue`) are a
+one-click signup. They wait on nothing: not the name, not the email, not the Terms box.
+`POST /api/register/social` (`SocialRegisterDto`, every form field optional but those)
+seals whatever was typed into the OAuth transaction and sends the browser to MAP:
+
+1. MAP signs the person in through the provider and creates the identity from the
+   provider's name and email.
+2. If the Terms box was ticked first, `terms_accepted=1` rides along and MAP records the
+   acceptance as `<provider>_signup`. Otherwise MAP's authorize gate finds no acceptance
+   of the current `TERMS_VERSION` and sends the new account to `/accept-terms` before any
+   code reaches this site — accepting records `first_accept` and resumes; declining
+   signs them out.
+3. `/auth/callback` runs `RegisterService.completeSocial` with the email from MAP's
+   claims and the names from the form, falling back to the provider's `given_name` and
+   `family_name`.
+
+The form path is unchanged: no account without the box ticked, and
+`CreateRegisterDto.termsAccepted` refuses anything but `true`. Step 2 relies on MAP's
+`TERMS_VERSION` being set, which production requires.
+
 ### Push, and the one service worker in the estate
 
 The estate rule is "manifest only, no service worker". Web Push cannot work without one, so
