@@ -1,49 +1,47 @@
-import {
-  Controller,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Res,
-  StreamableFile,
-} from '@nestjs/common';
-import { createReadStream } from 'node:fs';
-import type { Response } from 'express';
+import { Controller, Get, NotFoundException, Param, ParseUUIDPipe, Req, Res } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { Public } from '../common/auth/auth.decorators';
-import { FileStorageService } from '../common/storage/file-storage.service';
+import { ObjectStorageService } from '../common/storage/object-storage.service';
+import { redirectOrStream } from '../common/storage/stream-object';
 import { UploadsService } from './uploads.service';
 
+/** The bytes under an id never change — a re-upload is a new row. */
+const IMMUTABLE = 'public, max-age=31536000, immutable';
+
 /**
- * Serves uploaded images. Public, because a game's cover has to load for
- * everyone — and served by this process rather than nginx, so the
- * storage root never needs to be readable by anything but the app user.
+ * The stable address of an uploaded image: `/api/uploads/:id`.
+ *
+ * Public, because a game's cover has to load for everyone. The bytes
+ * themselves live in the object store, so a `public` upload answers a
+ * cacheable 302 to its bucket URL (the CDN, in production) and the browser
+ * keeps that for a year; `games.serializer.ts` and the settings that built
+ * `/api/uploads/<id>` go on working unchanged. A `restricted` upload is a 404
+ * here — an owner-checking route serves it. A row still carrying a pre-move
+ * disk key is streamed from `LEGACY_STORAGE_ROOT` until the migration has run.
  */
 @Public()
 @Controller('uploads')
 export class UploadsController {
   constructor(
     private readonly uploads: UploadsService,
-    private readonly storage: FileStorageService,
+    private readonly storage: ObjectStorageService,
   ) {}
 
+  // Express answers HEAD from a GET handler; `streamObject` sends headers only for it.
   @Get(':id')
   async serve(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Res({ passthrough: true }) response: Response,
-  ): Promise<StreamableFile> {
+    @Req() request: Request,
+    @Res() response: Response,
+  ): Promise<void> {
     const upload = await this.uploads.get(id);
-    const filePath = this.storage.resolveKey(upload.storageKey);
-
-    response.setHeader('Content-Type', upload.mimeType);
-    response.setHeader('Content-Length', String(upload.byteSize));
-    response.setHeader('X-Content-Type-Options', 'nosniff');
-    response.setHeader('Content-Disposition', 'inline');
-    // The id is a UUID minted per file and the bytes never change under it, so
-    // the browser may keep it for as long as it likes.
-    response.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    // Belt and braces for a raster image: even if a sniffer disagreed with us,
-    // nothing here may run script or load anything else.
-    response.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
-
-    return new StreamableFile(createReadStream(filePath));
+    if (upload.scope !== 'public') throw new NotFoundException('Not found');
+    await redirectOrStream(this.storage, request, response, upload.storageKey, {
+      contentType: upload.mimeType,
+      sha256: upload.sha256,
+      cacheControl: IMMUTABLE,
+      contentDisposition: 'inline',
+      sandbox: true,
+    });
   }
 }

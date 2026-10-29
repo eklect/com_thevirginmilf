@@ -3,7 +3,7 @@ import { MulterModule } from '@nestjs/platform-express';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { memoryStorage } from 'multer';
 import { AdminUploadsController } from '../admin/admin-uploads.controller';
-import { FileStorageService } from '../common/storage/file-storage.service';
+import { ObjectStorageService } from '../common/storage/object-storage.service';
 import { GameScreenshotEntity } from '../games/game-screenshot.entity';
 import { GameEntity } from '../games/game.entity';
 import { SiteSettingEntity } from '../settings/site-setting.entity';
@@ -17,7 +17,9 @@ import { UploadsService } from './uploads.service';
  *
  * `memoryStorage`: an image is capped at a few megabytes, so buffering it is
  * fine, and it means the bytes can be sniffed and refused before anything
- * touches the disk.
+ * reaches the bucket. (A big-upload module would use `objectStoreEngine`
+ * instead, which streams straight to the bucket; nothing in this app writes
+ * an upload to disk.)
  *
  * ## Why `AdminUploadsController` is declared here, and why Multer is not exported
  *
@@ -41,8 +43,8 @@ import { UploadsService } from './uploads.service';
       SiteSettingEntity,
     ]),
     MulterModule.registerAsync({
-      inject: [FileStorageService],
-      useFactory: (storage: FileStorageService) => ({
+      inject: [ObjectStorageService],
+      useFactory: (storage: ObjectStorageService) => ({
         storage: memoryStorage(),
         limits: {
           fileSize: storage.maxUploadBytes,

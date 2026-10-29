@@ -1,0 +1,21 @@
+{
+  "_comment": "fileStem(originalName, fallback='file') cases shared by object-key.spec.ts and storage_recipes.py. Keep the two implementations agreeing on every row.",
+  "cases": [
+    ["Exhibit A - Signed Lease.PDF", "exhibit-a-signed-lease"],
+    ["beach day.jpeg", "beach-day"],
+    ["Café Résumé.docx", "cafe-resume"],
+    ["  spaces   everywhere  .png", "spaces-everywhere"],
+    ["UPPER_CASE_name.tar.gz", "upper-case-name-tar"],
+    ["steam-620", "steam-620"],
+    ["....", "file"],
+    ["", "file"],
+    [null, "file"],
+    ["日本語のファイル.jpg", "file"],
+    ["archive.tar", "archive"],
+    ["noext", "noext"],
+    ["a.b.c.d.e.jpg", "a-b-c-d-e"],
+    ["aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhh-iiiiiiiiii.png", "aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhh"],
+    ["my photo (1).JPG", "my-photo-1"],
+    ["résumé_final-v2.pdf", "resume-final-v2"]
+  ]
+}

@@ -87,7 +87,7 @@ values itself. Set by hand, once:
 | Variable | |
 |---|---|
 | `SESSION_ENCRYPTION_SECRET` | `openssl rand -base64 48`. Also seals the stored Steam key — changing it signs everyone out **and** asks for Steam to be reconnected. |
-| `STORAGE_ROOT` | `/var/lib/muccico/storage/thevirginmilf_api` in the dev box. Must be outside the repo. |
+| `OBJECT_STORE_*`, `OBJECT_PUBLIC_BASE_URL`, `LEGACY_STORAGE_ROOT` | Not by hand in the dev box: `objects-provision-sites` writes them at boot. Production sets them with a per-role Spaces key (`muccico env init` prints the list). See *Uploaded images live in the object store* below. |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `npx web-push generate-vapid-keys`. **Set once per environment and leave alone** — changing the pair orphans every browser's push subscription. |
 | `MAIL_ENABLED`, `PUSH_ENABLED` | `false` writes each message to the log and marks it `logged` instead of sending. |
 | `STEAM_MODE` | `fixture` swaps her library for `test/fixtures/steam/owned-games.json`. Development only. |
@@ -309,6 +309,22 @@ phone brings up no keyboard and in these layouts often no picker. Each one takes
 phone's number pad or ordinary keyboard and has a drawn popover picker beside it. Their `v-model`
 strings are the native ones (`YYYY-MM-DDTHH:mm` here), so `views/admin/datetime.ts` converts them
 unchanged. Don't reintroduce native date inputs.
+
+### Uploaded images live in the object store
+
+Every image an admin uploads — a game's cover, a screenshot, the headshot, the logo — goes
+through `POST /api/admin/uploads` into ONE S3 bucket (DigitalOcean Spaces in production, the
+dev box's RustFS), never to this container's disk. `UploadsService.store` sniffs the bytes,
+then puts them at `uploads/<sub>/thevirginmilf/com_thevirginmilf/uploads/image/<stem>--<id>.<ext>`,
+`public-read`: that route does not know what an image is for, so everything through it files
+as `uploads/image` under the admin who uploaded it. `GET /api/uploads/:id` stays as the stable
+address (`games.serializer.ts` still builds it) and answers a cacheable 302 to the object's
+public URL (`OBJECT_PUBLIC_BASE_URL`, the Spaces CDN in production). A row whose
+`storage_key` is still a pre-move disk path (`images/<id>.png`) is streamed from
+`LEGACY_STORAGE_ROOT` until `storage_migrate.py` (muccico_devops) has carried it into the
+bucket and rewritten the row; then that line goes. The Steam sync stores Steam's CDN URLs and
+no bytes, so it is untouched. The key layout, the config and the legacy fallback are in
+`server/src/common/storage/` and the workspace `CLAUDE.md`.
 
 ---
 

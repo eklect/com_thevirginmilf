@@ -1,7 +1,10 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn } from 'typeorm';
 
+export const UPLOAD_SCOPES = ['public', 'restricted'] as const;
+export type UploadScope = (typeof UPLOAD_SCOPES)[number];
+
 /**
- * `uploads` — one row per file on disk.
+ * `uploads` — one row per stored image (an object in the bucket).
  *
  * A game's cover, a screenshot or the site logo points at one of these by id.
  * `UploadsService.remove` refuses while anything still does.
@@ -11,10 +14,22 @@ export class UploadEntity {
   @PrimaryColumn({ type: 'char', length: 36 })
   id!: string;
 
-  /** Relative to `STORAGE_ROOT`, e.g. `images/<id>.png`. */
+  /**
+   * The object key in `OBJECT_STORE_BUCKET` — see `common/storage/object-key.ts`.
+   * A value not under `uploads/` is a pre-move disk path (`images/<id>.png`),
+   * served from `LEGACY_STORAGE_ROOT` until `storage_migrate.py` rewrites it.
+   */
   @Index('ux_uploads_storage_key', { unique: true })
-  @Column({ name: 'storage_key', type: 'varchar', length: 255 })
+  @Column({ name: 'storage_key', type: 'varchar', length: 512 })
   storageKey!: string;
+
+  /**
+   * `public`: the object is `public-read` and `GET /uploads/:id` redirects to
+   * it. `restricted`: private in the bucket, 404 on the public route, served
+   * only by an owner-checking route. Everything this site stores is public.
+   */
+  @Column({ type: 'varchar', length: 16, default: 'public' })
+  scope!: UploadScope;
 
   /** Sniffed from the bytes, never taken from the client. */
   @Column({ name: 'mime_type', type: 'varchar', length: 64 })

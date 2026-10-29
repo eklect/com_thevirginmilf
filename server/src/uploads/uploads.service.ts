@@ -5,22 +5,36 @@ import {
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { ALLOWED_IMAGE_TYPES, sniffImageType } from '../common/storage/image-sniff';
-import { FileStorageService } from '../common/storage/file-storage.service';
+import { buildObjectKey } from '../common/storage/object-key';
+import { ObjectStorageService } from '../common/storage/object-storage.service';
 import { sanitizeFilename } from '../common/storage/safe-path';
 import { GameScreenshotEntity } from '../games/game-screenshot.entity';
 import { GameEntity } from '../games/game.entity';
 import { SiteSettingEntity } from '../settings/site-setting.entity';
-import { UploadEntity } from './upload.entity';
+import { UploadEntity, UploadScope } from './upload.entity';
 
 export interface UploadSummary {
   id: string;
   mimeType: string;
   byteSize: number;
   originalFilename: string;
+  scope: UploadScope;
+  /** Where the browser fetches it: the object's public URL, or the API route for a restricted or legacy one. */
+  url: string;
   createdAt: Date;
+}
+
+/** Where in the key an upload files: the module and what the file is. */
+export interface StoreOptions {
+  /** Default `uploads`. */
+  module?: string;
+  /** Default `image`. */
+  action?: string;
+  /** Default `public`. */
+  scope?: UploadScope;
 }
 
 @Injectable()
@@ -34,16 +48,23 @@ export class UploadsService {
     private readonly screenshots: Repository<GameScreenshotEntity>,
     @InjectRepository(SiteSettingEntity)
     private readonly settings: Repository<SiteSettingEntity>,
-    private readonly storage: FileStorageService,
+    private readonly storage: ObjectStorageService,
   ) {}
 
   /**
    * Stores an uploaded image. The bytes decide the type; the client's declared
-   * type and filename are recorded for display and trusted for nothing.
+   * type and filename are recorded for display and trusted for nothing. The
+   * object is filed under the uploader's MAP `sub` (see `object-key.ts`) and
+   * is `public-read` unless the caller says `restricted`.
+   *
+   * `/admin/uploads` does not say what an image is for — a cover, a
+   * screenshot, the headshot — so everything through it files as
+   * `uploads/image`.
    */
   async store(
     file: { buffer: Buffer; originalname: string },
     createdBy: string,
+    options: StoreOptions = {},
   ): Promise<UploadSummary> {
     const mimeType = sniffImageType(file.buffer);
     if (!mimeType) {
@@ -53,8 +74,22 @@ export class UploadsService {
     }
 
     const id = randomUUID();
-    const key = this.storage.buildKey(id, ALLOWED_IMAGE_TYPES.get(mimeType)!);
-    await this.storage.write(key, file.buffer);
+    const scope: UploadScope = options.scope ?? 'public';
+    const originalFilename = sanitizeFilename(file.originalname);
+    const key = buildObjectKey({
+      actor: createdBy,
+      module: options.module ?? 'uploads',
+      action: options.action ?? 'image',
+      id,
+      originalName: originalFilename,
+      extension: ALLOWED_IMAGE_TYPES.get(mimeType)!,
+    });
+    const stored = await this.storage.putBuffer(key, file.buffer, {
+      contentType: mimeType,
+      acl: scope === 'public' ? 'public-read' : 'private',
+      originalName: originalFilename,
+      rowId: id,
+    });
 
     try {
       const row = await this.repo.save(
@@ -62,17 +97,18 @@ export class UploadsService {
           id,
           storageKey: key,
           mimeType,
-          byteSize: file.buffer.byteLength,
-          originalFilename: sanitizeFilename(file.originalname),
-          sha256: createHash('sha256').update(file.buffer).digest('hex'),
+          byteSize: stored.byteSize,
+          originalFilename,
+          sha256: stored.sha256,
+          scope,
           createdBy,
         }),
       );
-      return summarize(row);
+      return this.summarize(row);
     } catch (error) {
-      // The row is what makes the file reachable; without it the bytes are an
-      // orphan, so do not leave them behind.
-      await this.storage.unlinkQuietly(key);
+      // The row is what makes the file reachable; without it the object is an
+      // orphan, so do not leave it behind.
+      await this.storage.deleteQuietly(key);
       throw error;
     }
   }
@@ -85,7 +121,7 @@ export class UploadsService {
 
   async list(): Promise<UploadSummary[]> {
     const rows = await this.repo.find({ order: { createdAt: 'DESC' } });
-    return rows.map(summarize);
+    return rows.map((row) => this.summarize(row));
   }
 
   /**
@@ -112,16 +148,26 @@ export class UploadsService {
       );
     }
     await this.repo.remove(row);
-    await this.storage.unlinkQuietly(row.storageKey);
+    await this.storage.deleteQuietly(row.storageKey);
   }
-}
 
-function summarize(row: UploadEntity): UploadSummary {
-  return {
-    id: row.id,
-    mimeType: row.mimeType,
-    byteSize: row.byteSize,
-    originalFilename: row.originalFilename,
-    createdAt: row.createdAt,
-  };
+  /** The browser-facing URL: straight to the bucket for a public object, the API route otherwise. */
+  urlFor(row: Pick<UploadEntity, 'id' | 'storageKey' | 'scope'>): string {
+    if (row.scope === 'public' && row.storageKey.startsWith('uploads/')) {
+      return this.storage.publicUrl(row.storageKey);
+    }
+    return `/api/uploads/${row.id}`;
+  }
+
+  summarize(row: UploadEntity): UploadSummary {
+    return {
+      id: row.id,
+      mimeType: row.mimeType,
+      byteSize: row.byteSize,
+      originalFilename: row.originalFilename,
+      scope: row.scope,
+      url: this.urlFor(row),
+      createdAt: row.createdAt,
+    };
+  }
 }
