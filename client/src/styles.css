@@ -724,6 +724,11 @@
     line-height: 0;
     padding: 0 0.1em;
   }
+  .markdown-body .footnote-marker.footnote-missing {
+    text-decoration: underline wavy;
+    text-underline-offset: 0.25em;
+    cursor: help;
+  }
   .markdown-body .footnote-marker.ProseMirror-selectednode {
     @apply text-text;
     outline: 1px solid currentColor;

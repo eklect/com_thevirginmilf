@@ -1,4 +1,6 @@
 import { InputRule, Node, wrappingInputRule } from '@tiptap/core';
+import { Plugin } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type MarkdownIt from 'markdown-it';
 
 /**
@@ -18,12 +20,13 @@ import type MarkdownIt from 'markdown-it';
  *
  *  - `footnoteReference`, an inline atom drawn as a superscript label, written
  *    out as `[^label]`. Typing `[^label]` anywhere but the start of a
- *    paragraph turns into one.
+ *    paragraph turns into one. One with no note of its label is marked as
+ *    missing, since the published page prints it as text.
  *  - `footnoteDefinition`, a block drawn with its label in the margin, written
  *    out as `[^label]: ` with any further paragraphs indented four spaces, the
- *    way `markdown-it-footnote` reads them. Typing `[^label]: ` at the start of
- *    a paragraph turns it into one; Enter on an empty line inside leaves it,
- *    as in a quote.
+ *    way `markdown-it-footnote` reads them. Typing `[^label]: ` (or `[^label] `,
+ *    colon forgotten) at the start of a paragraph turns it into one;
+ *    Enter on an empty line inside leaves it, as in a quote.
  *
  * Parsing is ours, not `markdown-it-footnote`'s. That plugin only recognises a
  * reference whose definition exists, and it moves every definition to the end
@@ -66,6 +69,11 @@ function installFootnoteSyntax(md: MarkdownIt): void {
   // `[^label]: text` at a line start, with indented continuation lines. The
   // line bookkeeping is `markdown-it-footnote`'s own definition rule; only the
   // tokens differ, and they stay where the definition was written.
+  //
+  // The colon is easy to leave out, and `markdown-it-footnote` then sees no
+  // note and prints the reference as text on the published page. So
+  // `[^label] text` at a line start is read as a definition here too, and the
+  // serializer writes it back WITH the colon: one visit to the editor mends it.
   md.block.ruler.before(
     'reference',
     'footnote_definition',
@@ -79,12 +87,15 @@ function installFootnoteSyntax(md: MarkdownIt): void {
       let pos = start + 2;
       while (pos < max && !LABEL_END.has(state.src.charCodeAt(pos))) pos++;
       if (pos === start + 2 || pos >= max || state.src.charCodeAt(pos) !== 0x5d) return false;
-      if (pos + 1 >= max || state.src.charCodeAt(++pos) !== 0x3a /* : */) return false;
+      const label = state.src.slice(start + 2, pos);
+      if (pos + 1 >= max) return false;
+      const after = state.src.charCodeAt(++pos);
+      if (after === 0x3a /* : */) pos++;
+      else if (!isSpace(after)) return false;
       if (silent) return true;
-      pos++;
 
       const open = state.push('footnote_def_open', 'div', 1);
-      open.meta = { label: state.src.slice(start + 2, pos - 2) };
+      open.meta = { label };
 
       const oldBMark = state.bMarks[startLine];
       const oldTShift = state.tShift[startLine];
@@ -181,6 +192,33 @@ export const FootnoteReference = Node.create({
     };
   },
 
+  /**
+   * A reference with no note of that label is printed as text on the published
+   * page (`markdown-it-footnote` only links a reference it can resolve), so
+   * the editor marks it rather than drawing it like one that works.
+   */
+  addProseMirrorPlugins() {
+    const missing = (doc: import('@tiptap/pm/model').Node): DecorationSet => {
+      const notes = new Set<string>();
+      doc.descendants((node) => {
+        if (node.type.name === 'footnoteDefinition') notes.add(node.attrs.label);
+      });
+      const marks: Decoration[] = [];
+      doc.descendants((node, pos) => {
+        if (node.type === this.type && !notes.has(node.attrs.label)) {
+          marks.push(
+            Decoration.node(pos, pos + node.nodeSize, {
+              class: 'footnote-missing',
+              title: `No note for this yet: start a paragraph with [^${node.attrs.label}]: `,
+            }),
+          );
+        }
+      });
+      return DecorationSet.create(doc, marks);
+    };
+    return [new Plugin({ props: { decorations: (state) => missing(state.doc) } })];
+  },
+
   addInputRules() {
     return [
       new InputRule({
@@ -242,7 +280,7 @@ export const FootnoteDefinition = Node.create({
   addInputRules() {
     return [
       wrappingInputRule({
-        find: /^\[\^([^\][\s]+)\]:\s$/,
+        find: /^\[\^([^\][\s]+)\]:?\s$/,
         type: this.type,
         getAttributes: (match) => ({ label: match[1] }),
         // Two definitions in a row are two notes, never one.
