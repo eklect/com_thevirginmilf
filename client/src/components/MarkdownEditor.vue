@@ -3,7 +3,7 @@ import { Extension, InputRule } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { EditorContent, useEditor } from '@tiptap/vue-3';
 import { Markdown } from 'tiptap-markdown';
-import { protectFootnotes, restoreFootnotes } from '../lib/footnote-guard';
+import { FootnoteDefinition, FootnoteReference, unescapeFootnotes } from '../lib/footnotes';
 import { onBeforeUnmount, ref, watch } from 'vue';
 
 /**
@@ -36,14 +36,14 @@ import { onBeforeUnmount, ref, watch } from 'vue';
  * did not produce — a load, or a reset — and ignores the echo of its own
  * emit. Do not replace it with a string comparison.
  *
- * ## Footnotes cross the round trip in disguise
+ * ## Footnotes are nodes
  *
- * TipTap has no footnote node, and its serializer escapes literal brackets,
- * so `[^1]` would come back out as `\[^1\]` and stop being a footnote. Every
- * string that goes INTO the editor passes through `protectFootnotes`, and
- * every string that comes OUT passes through `restoreFootnotes`; see
- * `lib/footnote-guard.ts`. Raw mode is untouched by this, since raw mode
- * never goes through TipTap at all.
+ * `[^1]` in the text and `[^1]: the note` below it parse into a
+ * `footnoteReference` (drawn as a superscript) and a `footnoteDefinition`
+ * (drawn with its label in the margin), and serialize back to the same
+ * syntax; typing either form in the rich-text pane makes the node. Anything
+ * the serializer still escapes on the way out, `unescapeFootnotes` puts back.
+ * See `lib/footnotes.ts`.
  */
 const props = defineProps<{
   modelValue: string;
@@ -113,9 +113,11 @@ const MarkdownLink = Extension.create({
 const lastEmitted = ref<string | null>(null);
 
 const editor = useEditor({
-  content: protectFootnotes(props.modelValue || ''),
+  content: props.modelValue || '',
   extensions: [
     StarterKit,
+    FootnoteReference,
+    FootnoteDefinition,
     MarkdownLink,
     // `html: false` is load-bearing — it stops raw HTML being parsed out of
     // the Markdown source, which is what keeps the "no stored HTML" property
@@ -128,7 +130,7 @@ const editor = useEditor({
     },
   },
   onUpdate: ({ editor }) => {
-    const markdown = restoreFootnotes(
+    const markdown = unescapeFootnotes(
       (editor.storage as any).markdown.getMarkdown() as string,
     );
     lastEmitted.value = markdown;
@@ -141,7 +143,7 @@ watch(
   (value) => {
     if (!editor.value) return;
     if (value === lastEmitted.value) return; // our own echo
-    editor.value.commands.setContent(protectFootnotes(value || ''));
+    editor.value.commands.setContent(value || '');
   },
 );
 
@@ -154,7 +156,7 @@ const raw = ref(false);
 function toggleRaw(): void {
   raw.value = !raw.value;
   if (!raw.value && editor.value) {
-    editor.value.commands.setContent(protectFootnotes(props.modelValue || ''));
+    editor.value.commands.setContent(props.modelValue || '');
   }
 }
 

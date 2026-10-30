@@ -713,4 +713,38 @@
     @apply no-underline;
     margin-left: 0.25em;
   }
+  /*
+   * The same footnotes in the visual editor, as `lib/footnotes.ts` draws its
+   * nodes: the reference as a superscript label, and each definition where it
+   * was written, set like a note with its label hung in the margin.
+   */
+  .markdown-body .footnote-marker {
+    @apply font-head text-muted;
+    font-size: 0.72em;
+    line-height: 0;
+    padding: 0 0.1em;
+  }
+  .markdown-body .footnote-marker.ProseMirror-selectednode {
+    @apply text-text;
+    outline: 1px solid currentColor;
+  }
+  .markdown-body .footnote-definition {
+    @apply text-muted;
+    display: grid;
+    grid-template-columns: minmax(1.6em, auto) 1fr;
+    column-gap: 0.6em;
+    font-size: 0.9em;
+  }
+  .markdown-body .footnote-definition::before {
+    @apply font-head;
+    content: attr(data-footnote-def) '.';
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .markdown-body .footnote-definition > * {
+    grid-column: 2;
+  }
+  .markdown-body .footnote-definition > p:first-child {
+    margin-top: 0;
+  }
 }
