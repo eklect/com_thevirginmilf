@@ -12,9 +12,8 @@ import { computed, ref } from 'vue';
  * at sunset, a toggle in Control Centre) with no reload: the media query's
  * change event re-resolves the theme and re-writes the attribute.
  *
- * DEFAULT: `light`, the brand's own first impression. A first visit is light
- * whatever the operating system prefers; `system` is a real choice, made by
- * hand from the theme control, and from then on the OS decides.
+ * DEFAULT: `system`. A first visit follows the operating system, and keeps
+ * following it until the person pins light or dark.
  *
  * The attribute this sets, `data-theme` on <html>, is what the stylesheet keys
  * off (the dark token block and Tailwind's `dark:` variant), so it is always
@@ -26,7 +25,7 @@ export type Theme = 'light' | 'dark';
 export type ThemePreference = Theme | 'system';
 
 const STORAGE_KEY = 'thevirginmilf-theme';
-const DEFAULT_PREFERENCE: ThemePreference = 'light';
+const DEFAULT_PREFERENCE: ThemePreference = 'system';
 
 /** The order a one-tap control steps through. */
 export const THEME_CYCLE: readonly ThemePreference[] = ['light', 'dark', 'system'];
@@ -60,6 +59,21 @@ export const theme = computed<Theme>(() =>
 
 function apply() {
   document.documentElement.setAttribute('data-theme', theme.value);
+  paintBrowserChrome();
+}
+
+/**
+ * A page with ONE `theme-color` meta (no `media` pair) would otherwise keep
+ * the browser's address bar in the colour index.html was written with, so a
+ * dark page sits under a light bar. Repaint it from the page's own background
+ * once the new tokens apply. A media-matched pair is left alone: it already
+ * follows the OS.
+ */
+function paintBrowserChrome() {
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]:not([media])');
+  if (!meta || !document.body) return;
+  const ground = getComputedStyle(document.body).backgroundColor;
+  if (ground && ground !== 'transparent' && ground !== 'rgba(0, 0, 0, 0)') meta.content = ground;
 }
 
 darkQuery?.addEventListener('change', (event) => {

@@ -12,7 +12,7 @@
  * <script> in index.html in the same commit.
  */
 (function () {
-  var preference = 'light';
+  var preference = 'system';
   try {
     var stored = localStorage.getItem('thevirginmilf-theme');
     if (stored === 'light' || stored === 'dark' || stored === 'system') preference = stored;
