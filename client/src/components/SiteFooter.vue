@@ -52,6 +52,7 @@ const site = useSiteStore();
               {{ child.navLabel }}
             </RouterLink>
           </template>
+          <RouterLink to="/help" class="font-head text-sm font-semibold no-underline hover:underline">Help</RouterLink>
         </nav>
 
         <div class="flex flex-col gap-2.5">

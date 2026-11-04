@@ -2,3 +2,7 @@
 	path = server/email_templates
 	url = git@github.com:eklect/muccico_email_templates.git
 	branch = master
+[submodule "client/help_ui"]
+	path = client/help_ui
+	url = git@github.com:eklect/muccico_venture_help_ui.git
+	branch = master

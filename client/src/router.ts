@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
+import { helpRoutes } from '../help_ui/src';
 import type { PageKey } from './api/types';
 import { useAuthStore } from './stores/auth';
 import { useSiteStore } from './stores/site';
@@ -154,6 +155,11 @@ const routes: RouteRecordRaw[] = [
       { path: 'api-access', component: () => import('./views/admin/ApiAccess.vue'), meta: { title: 'API access' } },
     ],
   },
+
+  // The shared help center. Open to everyone; a restricted article asks for a sign-in itself.
+
+  helpRoutes({ base: '/help' }),
+
 
   {
     path: '/:pathMatch(.*)*',

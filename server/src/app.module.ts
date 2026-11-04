@@ -26,6 +26,7 @@ import { SubscribersModule } from './subscribers/subscribers.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { ServiceAuthModule } from './service-auth/service-auth.module';
 import { EmailTemplatesModule } from './email-templates/email-templates.module';
+import { HelpModule } from './help/help.module';
 
 @Module({
   imports: [
@@ -72,6 +73,8 @@ import { EmailTemplatesModule } from './email-templates/email-templates.module';
     // API keys for other servers (/admin/api-access, /service/oauth/token) and
     // the email-template service plane the My Company Tools app edits through.
     ServiceAuthModule,
+    // The shared help center, read through this server at /help.
+    HelpModule,
     EmailTemplatesModule,
   ],
   controllers: [HealthController],
