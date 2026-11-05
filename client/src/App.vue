@@ -44,7 +44,6 @@ watch(
 
         <nav class="hidden items-center gap-x-6 lg:flex" aria-label="Main">
           <NavDropdown v-for="node in site.navTree" :key="node.page.key" :node="node" />
-          <RouterLink to="/help" class="kicker no-underline hover:text-text" active-class="text-text">Help</RouterLink>
         </nav>
 
         <!-- Right: the account cluster, then the theme. On a phone only the
@@ -115,7 +114,6 @@ watch(
             </RouterLink>
           </div>
         </template>
-        <RouterLink to="/help" class="display text-3xl no-underline">Help</RouterLink>
 
         <div class="masthead-rule mt-2 flex flex-wrap items-center gap-4 pt-5">
           <template v-if="auth.user">
