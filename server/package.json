@@ -38,7 +38,7 @@
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.1",
     "jose": "^5.10.0",
-    "multer": "^2.0.2",
+    "multer": "^2.5.0",
     "mysql2": "^3.22.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
@@ -89,5 +89,11 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "overrides": {
+    "multer": "$multer",
+    "typeorm": {
+      "glob": "^14.0.2"
+    }
   }
 }
