@@ -328,6 +328,43 @@ no bytes, so it is untouched. The key layout, the config and the legacy fallback
 
 ---
 
+
+## Add to calendar — Google, Outlook, `.ics` and private feeds
+
+Any dated item can go to Google Calendar, Outlook.com, Outlook (work or school) or a
+downloaded `.ics` file, and a signed-in person can make a **private subscription address**
+that those calendars re-read every few hours, so changes and cancellations follow.
+
+**Three detail levels**, one definition in `server/src/calendar-export/detail-level.ts`:
+`busy` (the time only, titled "Busy", `CLASS:PRIVATE`), `basic` (title and time) and `full`
+(title, time, notes, location, a link back). An administrator sets a **cap**; each person picks
+at or below it. The server applies `effectiveLevel(cap, chosen)` on every one-off export and on
+**every fetch** of a feed, so lowering the cap reaches subscriptions that already exist. The
+client only ever asks for a level; it never builds a payload.
+
+- `server/src/calendar-export/` is copied verbatim into every backend with a calendar (like
+  `mail/`): the RFC 5545 writer, the Google/Outlook links, the feed secret (shown once, stored
+  as SHA-256), calendar-day helpers. UIDs are an opaque hash, so a Busy entry does not say what
+  it is. Its README has the rules.
+- `client/src/components/calendar-export/` is copied verbatim into every client:
+  `AddToCalendarMenu` (an `icon-only` form for tight rows) and `SubscribeDialog` (level, name,
+  the address once, Google/Outlook/Apple buttons, Stop; the cap control for an administrator).
+  It needs `api`, `query`, `download` and `errorMessage` from `@/api/client`.
+- Files go out with **no extension in the URL** (`…/ics`, `/api/calendar-feed/<token>`): a
+  regex location in the static nginx template would beat the `/api/` prefix.
+- `calendar_feed_tokens` holds one live feed per person; making a new address revokes the old.
+  It is in `muccico_devops`'s `purge_recipes.py` by `owner_user_id`.
+- The feed route is `@Public()` and reads no cookie: the token is the whole credential. It
+  answers `Cache-Control: private, max-age=300` and 404 once revoked.
+
+**Here:** published streams, public like the calendar (`GET /site/streams/:id/export` and
+`…/ics`, cap at `/site/streams/export-settings`), built from `toStreamView`, so an anonymous
+visitor's export has no watch link, only "Sign in for the watch link". A signed-in visitor's
+subscription (`/calendar/export/subscription`) carries the watch links at Full. A stream with no
+end goes out three hours long. The cap is the `calendar_export_cap` row in `site_settings` (Full
+when absent), set by an admin. A feed stops once its owner removes the site in the MAP portal
+(`MapOptoutsService.isRemoved`). The Solutionist carries the same code.
+
 ## Layout
 
 ```

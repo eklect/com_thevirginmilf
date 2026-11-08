@@ -8,6 +8,7 @@ import {
   type CalendarEvent,
   type CalendarRange,
 } from '../components/calendar';
+import { AddToCalendarMenu, SubscribeDialog, type DetailLevel } from '../components/calendar-export';
 import GameCover from '../components/GameCover.vue';
 import MarkdownBody from '../components/MarkdownBody.vue';
 import PlatformIcon from '../components/PlatformIcon.vue';
@@ -81,7 +82,22 @@ const events = computed<CalendarEvent[]>(() =>
 
 const upcoming = ref<Stream[]>([]);
 
+// ---------- sending it to another calendar ----------
+
+const exportLevels = ref<DetailLevel[]>([]);
+const subscribing = ref(false);
+
+function subscribe(): void {
+  if (auth.user) subscribing.value = true;
+  else auth.startLogin('/streams');
+}
+
 onMounted(async () => {
+  try {
+    exportLevels.value = (await api.get<{ levels: DetailLevel[] }>('/api/site/streams/export-settings')).levels;
+  } catch {
+    // the menu stays hidden; the calendar itself still works
+  }
   try {
     upcoming.value = (await api.get<{ streams: Stream[] }>('/api/site/streams/upcoming')).streams;
   } catch {
@@ -142,6 +158,10 @@ const signIn = () => auth.startLogin(`/streams/${selectedId.value}`);
       </p>
 
       <p v-if="error" class="notice-error mt-6">{{ error }}</p>
+
+      <div class="mt-6">
+        <button type="button" class="btn" @click="subscribe">Subscribe in your calendar</button>
+      </div>
 
       <div class="mt-9">
         <CalendarShell :events="events" :loading="loading" :week-start="7" @range-change="load" @select="open">
@@ -248,6 +268,10 @@ const signIn = () => auth.startLogin(`/streams/${selectedId.value}`);
               </div>
               <p v-else class="mt-3 text-sm text-muted">No channel has been set for this stream yet.</p>
             </template>
+
+            <div v-if="exportLevels.length" class="mt-5">
+              <AddToCalendarMenu :export-path="`/api/site/streams/${selected.id}`" :levels="exportLevels" storage-key="streams.calendar.export-level" />
+            </div>
           </div>
         </div>
       </template>
@@ -262,4 +286,6 @@ const signIn = () => auth.startLogin(`/streams/${selectedId.value}`);
       </div>
     </DialogContent>
   </Dialog>
+
+  <SubscribeDialog v-model:open="subscribing" base-path="/api/calendar/export" :is-admin="auth.isAdmin" cap-scope="this site" />
 </template>

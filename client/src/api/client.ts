@@ -59,3 +59,33 @@ export function errorMessage(error: unknown): string {
     ? error.message
     : 'Something went wrong. Please try again.';
 }
+
+/** Build a query string from a plain object, skipping empty values. */
+export function query(params: Record<string, string | number | boolean | undefined | null>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue;
+    search.set(key, String(value));
+  }
+  const text = search.toString();
+  return text ? `?${text}` : '';
+}
+
+/** Fetch a file and hand it to the browser as a download, with the server's filename. */
+export async function download(path: string, fallbackName = 'download'): Promise<void> {
+  const response = await fetch(path, { credentials: 'include' });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    throw new ApiError(response.status, extractMessage(payload, response), payload);
+  }
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const name = /filename="([^"]+)"/.exec(disposition)?.[1] ?? fallbackName;
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
