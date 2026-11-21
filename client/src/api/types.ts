@@ -298,6 +298,98 @@ export interface SteamStatus {
   sync: { running: boolean; phase: 'library' | 'details' | null; done: number; total: number };
 }
 
+// ---------- past videos — `server/src/videos/` ----------
+
+export type VideoProvider = 'twitch' | 'youtube' | 'vimeo';
+export type VideoKind = 'archive' | 'highlight' | 'upload' | 'clip' | 'video';
+export type TwitchKind = 'archive' | 'highlight' | 'upload' | 'clip';
+/** The Live page's filter chips; `video` covers uploads and every other video. */
+export type VideoFilter = 'archive' | 'highlight' | 'clip' | 'video';
+
+export const VIDEO_FILTER_LABELS: Record<VideoFilter, string> = {
+  archive: 'Past broadcasts',
+  highlight: 'Highlights',
+  clip: 'Clips',
+  video: 'Videos',
+};
+
+export const VIDEO_KIND_LABELS: Record<VideoKind, string> = {
+  archive: 'Past broadcast',
+  highlight: 'Highlight',
+  upload: 'Upload',
+  clip: 'Clip',
+  video: 'Video',
+};
+
+export const TWITCH_KIND_LABELS: Record<TwitchKind, string> = {
+  archive: 'Past broadcasts',
+  highlight: 'Highlights',
+  upload: 'Uploads',
+  clip: 'Clips',
+};
+
+export interface Video {
+  id: string;
+  provider: VideoProvider;
+  kind: VideoKind;
+  externalId: string;
+  url: string;
+  title: string;
+  thumbnailUrl: string | null;
+  durationSeconds: number | null;
+  publishedAt: string;
+  isPinned: boolean;
+}
+
+export interface AdminVideo extends Video {
+  source: 'twitch' | 'youtube' | 'custom';
+  sourceTitle: string;
+  titleOverride: string | null;
+  isHidden: boolean;
+  goneAt: string | null;
+  viewCount: number | null;
+}
+
+export interface VideoPage {
+  videos: Video[];
+  hasMore: boolean;
+  filters: VideoFilter[];
+}
+
+export interface VideoConnectionStatus {
+  fixtureMode: boolean;
+  twitch: { connected: boolean; needsReconnect: boolean; clientId: string | null; channels: { name: string; handle: string }[] };
+  youtube: { connected: boolean; needsReconnect: boolean; channels: { name: string; handle: string }[] };
+  twitchKinds: TwitchKind[];
+  lastSync: { at: string | null; status: 'ok' | 'partial' | 'failed' | null; error: string | null; count: number | null };
+  sync: { running: boolean; platform: 'twitch' | 'youtube' | null; done: number };
+}
+
+/** "1:02:03" or "4:05". */
+export function formatDuration(seconds: number | null | undefined): string {
+  if (seconds === null || seconds === undefined || seconds < 0) return '';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const mm = h ? String(m).padStart(2, '0') : String(m);
+  return `${h ? `${h}:` : ''}${mm}:${String(s).padStart(2, '0')}`;
+}
+
+/**
+ * The address to frame a video at. `parent` is the page's own hostname,
+ * which Twitch requires and checks; it is read from the address bar so one
+ * build works on `.test`, behind the Vite proxy and in production.
+ */
+export function videoPlayerUrl(video: Pick<Video, 'provider' | 'kind' | 'externalId'>, host: string): string {
+  const id = encodeURIComponent(video.externalId);
+  if (video.provider === 'youtube') return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`;
+  if (video.provider === 'vimeo') return `https://player.vimeo.com/video/${id}?autoplay=1`;
+  if (video.kind === 'clip') {
+    return `https://clips.twitch.tv/embed?${new URLSearchParams({ clip: video.externalId, parent: host, autoplay: 'true' })}`;
+  }
+  return `https://player.twitch.tv/?${new URLSearchParams({ video: video.externalId, parent: host, autoplay: 'true' })}`;
+}
+
 // ---------- account, uploads, subscribers ----------
 
 export interface AccountSettings {

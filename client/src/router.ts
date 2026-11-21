@@ -44,7 +44,8 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/live',
     component: () => import('./views/Live.vue'),
-    meta: { pageKey: 'live', title: 'Live' },
+    // `?video=` changes which video plays; the page scrolls to the player itself.
+    meta: { pageKey: 'live', title: 'Live', keepScroll: true },
   },
 
   /** `category/:slug` is declared before `:slug` so the literal wins. */
@@ -148,6 +149,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'reviews', component: () => import('./views/admin/Reviews.vue') },
       { path: 'reviews/:reviewId', component: () => import('./views/admin/ReviewEdit.vue') },
       { path: 'steam', component: () => import('./views/admin/Steam.vue') },
+      { path: 'videos', component: () => import('./views/admin/Videos.vue') },
       { path: 'images', component: () => import('./views/admin/Images.vue') },
       { path: 'subscribers', component: () => import('./views/admin/Subscribers.vue') },
       { path: 'pages', component: () => import('./views/admin/Pages.vue') },

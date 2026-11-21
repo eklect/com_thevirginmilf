@@ -20,6 +20,9 @@ import { SettingsService } from '../settings/settings.service';
 import { StreamRangeQueryDto } from '../streams/dto/stream.dto';
 import { StreamViewer, toStreamView } from '../streams/streams.serializer';
 import { StreamsService } from '../streams/streams.service';
+import { VideoListQueryDto } from '../videos/dto/video.dto';
+import { toVideoView } from '../videos/videos.serializer';
+import { VideosService } from '../videos/videos.service';
 import { PageEnabledGuard } from './page-enabled.guard';
 
 /** A stream response depends on who is asking, so nothing may cache it. */
@@ -60,6 +63,7 @@ export class SiteController {
     private readonly games: GamesService,
     private readonly categories: CategoriesService,
     private readonly reviews: ReviewsService,
+    private readonly videos: VideosService,
   ) {}
 
   /**
@@ -210,5 +214,28 @@ export class SiteController {
   @UseGuards(PageEnabledGuard('favorites'))
   async favorites() {
     return this.games.favorites();
+  }
+
+  // ---------- past videos, on the Live page ----------
+
+  /**
+   * Anyone can watch these — they are public on Twitch and YouTube already —
+   * so, unlike a stream's link, nothing here depends on who is asking. A
+   * short shared cache is fine: a hide takes a minute to show.
+   */
+  @Get('videos')
+  @UseGuards(PageEnabledGuard('live'))
+  @Header('Cache-Control', 'public, max-age=60')
+  async videoList(@Query() query: VideoListQueryDto) {
+    const { videos, hasMore, filters } = await this.videos.publicList(query);
+    return { videos: videos.map(toVideoView), hasMore, filters };
+  }
+
+  /** One video, for a `/live?video=<id>` link. Per viewer: an admin can open a hidden one. */
+  @Get('videos/:id')
+  @UseGuards(PageEnabledGuard('live'))
+  @Header('Cache-Control', PER_VIEWER)
+  async videoDetail(@Param('id', new ParseUUIDPipe()) id: string, @Req() request: Request) {
+    return { video: toVideoView(await this.videos.getVisible(id, Boolean(request.user?.isAdmin))) };
   }
 }

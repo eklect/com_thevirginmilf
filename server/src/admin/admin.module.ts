@@ -8,6 +8,7 @@ import { SettingsModule } from '../settings/settings.module';
 import { SteamModule } from '../steam/steam.module';
 import { StreamsModule } from '../streams/streams.module';
 import { SubscribersModule } from '../subscribers/subscribers.module';
+import { VideosModule } from '../videos/videos.module';
 import {
   AdminCategoriesController,
   AdminChannelsController,
@@ -18,6 +19,7 @@ import { AdminSettingsController } from './admin-settings.controller';
 import { AdminSteamController } from './admin-steam.controller';
 import { AdminStreamsController } from './admin-streams.controller';
 import { AdminSubscribersController } from './admin-subscribers.controller';
+import { AdminVideosController } from './admin-videos.controller';
 
 /**
  * The write plane. Every controller here is `@AdminOnly()` at class level, so
@@ -42,6 +44,7 @@ import { AdminSubscribersController } from './admin-subscribers.controller';
     SteamModule,
     SubscribersModule,
     PushModule,
+    VideosModule,
   ],
   controllers: [
     AdminStreamsController,
@@ -52,6 +55,7 @@ import { AdminSubscribersController } from './admin-subscribers.controller';
     AdminSteamController,
     AdminSubscribersController,
     AdminSettingsController,
+    AdminVideosController,
   ],
 })
 export class AdminModule {}

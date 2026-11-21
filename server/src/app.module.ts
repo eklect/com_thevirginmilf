@@ -24,6 +24,7 @@ import { SteamModule } from './steam/steam.module';
 import { StreamsModule } from './streams/streams.module';
 import { SubscribersModule } from './subscribers/subscribers.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { VideosModule } from './videos/videos.module';
 import { ServiceAuthModule } from './service-auth/service-auth.module';
 import { EmailTemplatesModule } from './email-templates/email-templates.module';
 import { HelpModule } from './help/help.module';
@@ -36,7 +37,8 @@ import { HelpModule } from './help/help.module';
       useFactory: buildTypeOrmOptions,
     }),
     // Registers every `@Cron` job: the stream alert sweep, the two queue
-    // drains, the MAP opt-out sync and the daily Steam sync. Each logs from
+    // drains, the MAP opt-out sync, the daily Steam sync and the
+    // half-hourly video sync. Each logs from
     // `onApplicationBootstrap`, because this module does not populate its
     // registry until its own bootstrap hook runs.
     ScheduleModule.forRoot(),
@@ -61,6 +63,7 @@ import { HelpModule } from './help/help.module';
     CategoriesModule,
     ReviewsModule,
     SteamModule,
+    VideosModule,
     UploadsModule,
 
     // Surfaces: the public read plane, signup, the admin write plane, and the

@@ -35,6 +35,9 @@ under [First run](#first-run-in-order) are done there.
 - **Game pages** — cover art, screenshots, the facts, her rating, her notes and her reviews.
 - **Favorites** — every game she hearted, then the most-played games from Steam.
 - **About, Links, Live** — Live embeds the Twitch player and chat.
+- **Past videos** — under the Live player: her Twitch past broadcasts, highlights, uploads and
+  clips, her YouTube uploads, and any video an admin pastes. They play in the Live player, and
+  anyone can watch them. See [Past videos](#past-videos).
 - **Accounts through MAP.** No users table, no passwords here. Signing up means agreeing to
   the Mucci & Co Terms of Service and Privacy Policy — one set for every venture — and MAP
   records that acceptance. See [Terms, privacy and the MAP opt-out](#terms-privacy-and-the-map-opt-out).
@@ -91,6 +94,7 @@ values itself. Set by hand, once:
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `npx web-push generate-vapid-keys`. **Set once per environment and leave alone** — changing the pair orphans every browser's push subscription. |
 | `MAIL_ENABLED`, `PUSH_ENABLED` | `false` writes each message to the log and marks it `logged` instead of sending. |
 | `STEAM_MODE` | `fixture` swaps her library for `test/fixtures/steam/owned-games.json`. Development only. |
+| `VIDEOS_MODE` | `fixture` swaps Twitch and YouTube for `test/fixtures/videos/videos.json` and counts both as connected. Development only. |
 
 ---
 
@@ -139,6 +143,43 @@ The API key is stored sealed (`common/secret-box.ts`) and no endpoint returns it
 Hearted games first, then the top *N* Steam games by playtime (`favorites_auto_count`,
 default 10) that are not hidden, not hearted, and not flagged *keep it off "most played"*.
 A manual game has no playtime, so the heart is its only way on.
+
+### Past videos
+
+`server/src/videos/`, `client/src/views/Live.vue`, `/admin/videos`.
+
+- **Which accounts:** every published stream channel with a `handle`. The handle is the Twitch
+  login or the YouTube channel id (`UC…`), the same ones the Live player embeds. Nothing else
+  to configure.
+- **The keys** are pasted at `/admin/videos`: a Twitch app's Client ID and secret (register one
+  at dev.twitch.tv, any account) and a YouTube Data API v3 key (Google Cloud). They live in
+  `video_connection`, sealed with `SESSION_ENCRYPTION_SECRET` like the Steam key, and are checked
+  against the platform before they are saved. No endpoint returns them. Rotating that secret
+  shows "enter it again".
+- **The sync** runs at :07 and :37 past each hour (UTC) and on Sync now, in the background. It
+  reads Helix `/videos` (archive, highlight, upload) and `/clips`, then YouTube's uploads
+  playlist. Live, upcoming, private and non-embeddable YouTube videos are skipped, and a YouTube
+  live archive is filed as a past broadcast. A run costs a few YouTube quota units.
+- **Two owners, like `games`.** The sync writes the `source_*` columns, thumbnail, duration,
+  dates and `gone_at`. The admin writes `title` (an override), `is_hidden` and `is_pinned`.
+  Thumbnails are hotlinked, never uploaded.
+- **Nothing synced is deleted.** A video missing from a complete listing gets `gone_at` and
+  leaves the site; it is cleared if the video comes back. That covers Twitch expiring old
+  broadcasts after 7 to 60 days. A listing cut off at a ceiling (300 clips, 500 per Twitch kind,
+  2,000 YouTube) marks nothing gone. Only a pasted (`custom`) row can be deleted.
+- **The Twitch kind switches** take a kind off the site without deleting its rows. Pasted links
+  ignore them.
+- **Pasted links** go through `video-links.ts`: exact hostnames, https only, and the stored URL
+  is rebuilt from the id. YouTube, Twitch video or clip, and Vimeo are accepted; channel links
+  are refused. The title comes from the platform's API when its key is in, otherwise from
+  oEmbed (YouTube, Vimeo). With neither, the admin types it.
+- **Public routes:** `GET /api/site/videos?kind=&offset=` (24 a page, pinned first, cached
+  60 seconds) and `GET /api/site/videos/:id`, both behind the `live` page switch. There is no
+  sign-in gate: the videos are public on the platforms already.
+- **The page:** pressing a tile writes `?video=<id>` and swaps the top player's address
+  (`videoPlayerUrl` in `api/types.ts`; Twitch's `parent` comes from the address bar, YouTube
+  uses the no-cookie host). Live chat is hidden while a video plays, because Twitch has no
+  embeddable chat replay. "Back to live" removes the query, and browser Back works.
 
 ### Alerts
 

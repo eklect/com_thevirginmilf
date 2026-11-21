@@ -11,6 +11,7 @@ import { CalendarFeedTokenEntity } from '../streams/calendar-feed-token.entity';
 import { StreamExportService } from '../streams/export.service';
 import { StreamEventEntity } from '../streams/stream-event.entity';
 import { StreamsModule } from '../streams/streams.module';
+import { VideosModule } from '../videos/videos.module';
 import { CalendarExportController, CalendarFeedPublicController, StreamExportController } from './calendar-export.controller';
 import { SiteController } from './site.controller';
 
@@ -24,6 +25,7 @@ import { SiteController } from './site.controller';
     CategoriesModule,
     ReviewsModule,
     PushModule,
+    VideosModule,
   ],
   controllers: [StreamExportController, SiteController, CalendarExportController, CalendarFeedPublicController],
   providers: [StreamExportService],

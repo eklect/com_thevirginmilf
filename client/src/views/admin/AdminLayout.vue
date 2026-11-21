@@ -8,6 +8,7 @@ const sections = [
   { to: '/admin/categories', label: 'Categories' },
   { to: '/admin/reviews', label: 'Reviews' },
   { to: '/admin/steam', label: 'Steam' },
+  { to: '/admin/videos', label: 'Videos' },
   { to: '/admin/images', label: 'Images' },
   { to: '/admin/subscribers', label: 'Subscribers' },
   { to: '/admin/site', label: 'Site settings' },
