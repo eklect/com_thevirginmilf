@@ -404,6 +404,8 @@ export interface Upload {
   byteSize: number;
   originalFilename: string;
   createdAt: string;
+  /** Where the bytes are: the object's own address, used for thumbnails. */
+  url?: string;
 }
 
 export interface SubscriberRow {

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { api } from '../api/client';
+import { clearDraftsFor, setDraftOwner } from '../lib/drafts';
 import type { Me } from '../api/types';
 import type { ProviderInfo } from '../api/social';
 
@@ -36,6 +37,8 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       resolved.value = true;
     }
+    // Unsaved drafts are kept per person; say whose they are from here on.
+    setDraftOwner(user.value?.id ?? null);
     return user.value;
   }
 
@@ -91,9 +94,13 @@ export const useAuthStore = defineStore('auth', () => {
    * `AuthController.logout` for why.
    */
   async function logout(allDevices = false): Promise<void> {
+    const leaving = user.value?.id ?? null;
     const { redirectTo } = await api.post<{ redirectTo: string }>('/api/auth/logout', {
       allDevices,
     });
+    // Signing out takes this person's unsaved drafts with it.
+    if (leaving) clearDraftsFor(leaving);
+    setDraftOwner(null);
     user.value = null;
     window.location.assign(redirectTo);
   }

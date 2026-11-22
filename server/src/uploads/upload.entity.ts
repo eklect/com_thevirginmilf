@@ -10,6 +10,7 @@ export type UploadScope = (typeof UPLOAD_SCOPES)[number];
  * `UploadsService.remove` refuses while anything still does.
  */
 @Entity('uploads')
+@Index('ix_uploads_created', ['createdAt', 'id'])
 export class UploadEntity {
   @PrimaryColumn({ type: 'char', length: 36 })
   id!: string;

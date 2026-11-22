@@ -6,6 +6,8 @@ import { SITE_SETTING_KEYS } from '../../api/types';
 import ImagePicker from '../../components/ImagePicker.vue';
 import MarkdownEditor from '../../components/MarkdownEditor.vue';
 import { useSiteStore } from '../../stores/site';
+import { useDraft } from '../../composables/useDraft';
+import DraftNotice from '../../components/DraftNotice.vue';
 import { useSaveNotice } from './useSaveNotice';
 
 const site = useSiteStore();
@@ -171,10 +173,24 @@ const GROUPS: {
   },
 ];
 
+// Keeps the long text in this browser until the save goes through: every
+// setting edited in a text box or the Markdown editor, and none of the
+// one-line ones.
+const draftReady = ref(false);
+const draft = useDraft(
+  'settings',
+  form,
+  GROUPS.flatMap((group) => group.fields)
+    .filter((field) => field.long || field.markdown)
+    .map((field) => field.key),
+  { ready: draftReady },
+);
+
 onMounted(async () => {
   try {
     const { settings } = await api.get<{ settings: SiteSettings }>('/api/admin/settings');
     form.value = { ...form.value, ...settings };
+    draftReady.value = true;
   } catch (e) {
     error.value = errorMessage(e);
   }
@@ -188,6 +204,7 @@ async function save() {
     // A flat key -> value map, not a `{ settings }` envelope: the endpoint reads
     // the body's own keys and 400s on any that is not a known setting.
     await api.put('/api/admin/settings', form.value);
+    draft.clear();
     await site.reload();
     await flagSaved('Saved.');
   } catch (e) {
@@ -218,6 +235,8 @@ async function save() {
   >
     {{ notice }}
   </p>
+
+  <DraftNotice :draft="draft" class="mt-5" />
 
   <form class="mt-7 max-w-2xl" @submit.prevent="save">
     <section v-for="group in GROUPS" :key="group.title" class="mb-10">
@@ -255,6 +274,7 @@ async function save() {
           <MarkdownEditor
             v-if="field.markdown"
             v-model="form[field.key]"
+            admin-images
             class="mt-1.5"
           />
           <textarea

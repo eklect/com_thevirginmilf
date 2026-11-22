@@ -7,6 +7,8 @@ import MarkdownEditor from '../../components/MarkdownEditor.vue';
 import { DateTimeInput } from '../../components/date';
 import { fromLocalInput, localZone, toLocalInput } from './datetime';
 import { useSaveNotice } from './useSaveNotice';
+import { useDraft } from '../../composables/useDraft';
+import DraftNotice from '../../components/DraftNotice.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -34,11 +36,15 @@ const alreadyAnnounced = ref(false);
 const error = ref('');
 const busy = ref(false);
 
+// Keeps the long text in this browser until the save goes through.
+const draftReady = ref(false);
+const draft = useDraft(() => `stream:${id ?? 'new'}`, form, ['description'], { ready: draftReady });
+
 // This view returns to /admin/streams on success, so the confirmation has to
 // be said there rather than on a form that is already unmounting.
 const { flashSaved, clearNotice, alertEl, revealAlert } = useSaveNotice();
 
-onMounted(async () => {
+async function load(): Promise<void> {
   try {
     const [channelData, gameData, streamData] = await Promise.all([
       api.get<{ channels: AdminChannel[] }>('/api/admin/channels'),
@@ -77,6 +83,12 @@ onMounted(async () => {
   } catch (e) {
     error.value = errorMessage(e);
   }
+}
+
+onMounted(async () => {
+  await load();
+  // Drafts start from what was loaded; a failed load has nothing to start from.
+  draftReady.value = !error.value;
 });
 
 const zone = localZone();
@@ -105,6 +117,7 @@ async function save() {
   try {
     if (id) await api.put(`/api/admin/streams/${id}`, body);
     else await api.post('/api/admin/streams', body);
+    draft.clear();
     flashSaved(
       willNotify.value
         ? 'Stream saved. It will be announced in about two minutes.'
@@ -127,6 +140,7 @@ async function save() {
   <h1 class="display text-4xl">{{ id ? 'Edit stream' : 'Schedule a stream' }}</h1>
   <p v-if="error" ref="alertEl" role="alert" class="notice-error mt-5">{{ error }}</p>
 
+  <DraftNotice :draft="draft" class="mt-5" />
   <form class="mt-7 max-w-2xl space-y-6" @submit.prevent="save">
     <div>
       <label for="title" class="kicker block">Title</label>
@@ -189,7 +203,7 @@ async function save() {
 
     <div>
       <label class="kicker block">Description (optional)</label>
-      <MarkdownEditor v-model="form.description" class="mt-1.5" />
+      <MarkdownEditor v-model="form.description" admin-images class="mt-1.5" />
       <p class="mt-1.5 text-xs text-muted">
         Everyone can read this, signed in or not. Put the stream link on the channel above — a link
         typed here is public.

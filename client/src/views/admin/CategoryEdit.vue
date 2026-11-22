@@ -4,6 +4,8 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { api, errorMessage } from '../../api/client';
 import type { AdminCategory } from '../../api/types';
 import { useSaveNotice } from './useSaveNotice';
+import { useDraft } from '../../composables/useDraft';
+import DraftNotice from '../../components/DraftNotice.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -13,11 +15,20 @@ const form = ref({ name: '', slug: '', description: '', isPublished: true });
 const error = ref('');
 const busy = ref(false);
 
+// Keeps the long text in this browser until the save goes through.
+const draftReady = ref(false);
+const draft = useDraft(
+  () => `category:${id ?? 'new'}`,
+  form,
+  ['description'],
+  { ready: draftReady },
+);
+
 // This view returns to /admin/categories on success, so the confirmation has
 // to be said there rather than on a form that is already unmounting.
 const { flashSaved, clearNotice } = useSaveNotice();
 
-onMounted(async () => {
+async function load(): Promise<void> {
   if (!id) return;
   try {
     const { item } = await api.get<{ item: AdminCategory }>(`/api/admin/categories/${id}`);
@@ -30,6 +41,12 @@ onMounted(async () => {
   } catch (e) {
     error.value = errorMessage(e);
   }
+}
+
+onMounted(async () => {
+  await load();
+  // Drafts start from what was loaded; a failed load has nothing to start from.
+  draftReady.value = !error.value;
 });
 
 async function save() {
@@ -47,6 +64,7 @@ async function save() {
     };
     if (id) await api.put(`/api/admin/categories/${id}`, body);
     else await api.post('/api/admin/categories', body);
+    draft.clear();
     flashSaved(id ? 'Category saved.' : 'Category created.', '/admin/categories');
     void router.push('/admin/categories');
   } catch (e) {
@@ -61,6 +79,7 @@ async function save() {
   <h1 class="display text-4xl">{{ id ? 'Edit category' : 'New category' }}</h1>
   <p v-if="error" class="notice-error mt-5">{{ error }}</p>
 
+  <DraftNotice :draft="draft" class="mt-5" />
   <form class="mt-7 max-w-md space-y-5" @submit.prevent="save">
     <div>
       <label for="name" class="kicker block">Name</label>

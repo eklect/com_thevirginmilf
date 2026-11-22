@@ -17,6 +17,8 @@ import MarkdownEditor from '../../components/MarkdownEditor.vue';
 import StarRating from '../../components/StarRating.vue';
 import ConfirmButton from './ConfirmButton.vue';
 import { useSaveNotice } from './useSaveNotice';
+import { useDraft } from '../../composables/useDraft';
+import DraftNotice from '../../components/DraftNotice.vue';
 
 /**
  * One game: what the site says about it, its gallery and its reviews.
@@ -59,6 +61,16 @@ const form = ref({
 
 const error = ref('');
 const busy = ref(false);
+
+// Keeps the long text in this browser until the save goes through.
+const draftReady = ref(false);
+const draft = useDraft(
+  () => `game:${id ?? 'new'}`,
+  form,
+  ['summary', 'description'],
+  { ready: draftReady },
+);
+
 const isSteam = computed(() => game.value?.source === 'steam');
 
 // Stays on the page after saving — the gallery and the reviews are below the
@@ -84,7 +96,7 @@ function fill(loaded: AdminGame): void {
   };
 }
 
-onMounted(async () => {
+async function load(): Promise<void> {
   try {
     const [categoryData, gameData] = await Promise.all([
       api.get<{ categories: AdminCategory[] }>('/api/admin/categories'),
@@ -103,6 +115,12 @@ onMounted(async () => {
   } catch (e) {
     error.value = errorMessage(e);
   }
+}
+
+onMounted(async () => {
+  await load();
+  // Drafts start from what was loaded; a failed load has nothing to start from.
+  draftReady.value = !error.value;
 });
 
 async function save() {
@@ -130,10 +148,12 @@ async function save() {
   try {
     if (id) {
       fill((await api.put<{ game: AdminGame }>(`/api/admin/games/${id}`, body)).game);
+      draft.clear();
       await flagSaved('Saved.');
     } else {
       const { game: created } = await api.post<{ game: AdminGame }>('/api/admin/games', body);
       // Onward to the new game's own page, where screenshots and reviews are.
+      draft.clear();
       flashSaved('Game added. Add screenshots and a review below.', `/admin/games/${created.id}`);
       void router.push(`/admin/games/${created.id}`);
     }
@@ -171,6 +191,7 @@ async function remove() {
   busy.value = true;
   try {
     await api.delete(`/api/admin/games/${id}`);
+    draft.clear();
     flashSaved('Game deleted.', '/admin/games');
     void router.push('/admin/games');
   } catch (e) {
@@ -260,6 +281,7 @@ function moveShot(index: number, direction: -1 | 1) {
     clear it to go back to Steam's. A sync never changes what you type here.
   </p>
 
+  <DraftNotice :draft="draft" class="mt-5" />
   <form class="mt-7 grid max-w-5xl gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,1fr)_300px]" @submit.prevent="save">
     <div class="space-y-5">
       <div>
@@ -309,7 +331,7 @@ function moveShot(index: number, direction: -1 | 1) {
 
       <div>
         <label class="kicker block">Her notes (optional)</label>
-        <MarkdownEditor v-model="form.description" class="mt-1.5" />
+        <MarkdownEditor v-model="form.description" admin-images class="mt-1.5" />
         <p class="mt-1.5 text-xs text-muted">
           Anything she wants to say about the game that is not a review — shown above the reviews.
         </p>

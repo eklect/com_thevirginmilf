@@ -367,8 +367,96 @@ bucket and rewritten the row; then that line goes. The Steam sync stores Steam's
 no bytes, so it is untouched. The key layout, the config and the legacy fallback are in
 `server/src/common/storage/` and the workspace `CLAUDE.md`.
 
----
+### The image library is a grid, read a page at a time
 
+Choosing an image used to be a dropdown of every filename. It is now a grid
+of thumbnails with a search box, in three pieces:
+
+| File | What it is |
+|---|---|
+| `ImageLibraryPanel.vue` | Search, the grid, load-on-scroll, drop-to-upload. Held by both of the next two and by `ImageInsertDialog.vue`. |
+| `ImageLibraryDialog.vue` | The panel in a dialog with Cancel and Choose. |
+| `ImagePicker.vue` | The control on a cover, logo or headshot field: preview, filename, **Choose image**, Clear. Same props and `v-model` (the upload id) as before, so no form changed. |
+
+`GET /api/admin/uploads` backs it. With no query it still answers every row
+(the Images page reads that). With any of `limit` (default 50, at most 100),
+`cursor`, `q` or `type` it answers one page, newest first:
+`{ uploads, nextCursor, hasMore, total }`. `q` matches anywhere in the
+original filename, with `%` and `_` taken literally. `type` is a comma list of
+mime types for a slot that takes fewer formats. The cursor is a keyset over
+`(created_at, id)`, which is what the `ix_uploads_created` index is for.
+`GET /api/admin/uploads/:id` answers one image, so a picker can name its
+current choice without holding the list. All of it is in
+`server/src/uploads/upload-page.ts`, the same file in every venture's backend.
+
+The panel asks for the next page when a sentinel under the grid comes within
+300px of the bottom of its own scroll box. Thumbnails are the images
+themselves, loaded lazily from the bucket address each item carries (`url`),
+so a page of fifty never touches the API's rate limit. Dropping files anywhere
+on the panel uploads them one at a time; each lands at the top of the grid,
+selected, and a refused one stays listed with the server's reason.
+
+**Images inside the writing.** `MarkdownEditor.vue` takes an opt-in
+`admin-images` attribute. With it the editor loads TipTap's image node
+(`@tiptap/extension-image`, inline, no `data:` URIs), shows an Image button in
+both panes and opens `ImageInsertDialog.vue`: pick or upload from the library,
+or paste an address, add alt text, insert. A library image is stored as
+`![alt](/api/uploads/<id>)`. It is set on the four admin screens that use the
+editor (a review's body, a game's notes, a stream's description, the About
+page in Site settings) and must stay off anywhere a signed-in visitor could
+type, because the library is `/api/admin/uploads`. `MarkdownBody.vue` renders
+the image and `.markdown-body img` in `styles.css` keeps it inside the column.
+
+An embedded image has no foreign key, so `UploadsService.remove` also looks
+for `/api/uploads/<id>` inside `reviews.body`, `games.description`,
+`stream_events.description` and `site_settings.value`, and refuses the delete
+while any of them still shows it. A new Markdown column that the editor writes
+with `admin-images` goes on that list.
+
+### Unsaved writing is kept in the browser
+
+Leaving a form half-written used to lose the text. Every long text field now
+keeps a draft in `localStorage` until the save goes through: a review's body,
+a game's summary and notes, a stream's description, a category's description
+and the long site settings (the page intros and the About page).
+
+Three files, the same in every Mucci & Co client:
+
+- `client/src/lib/drafts.ts` is the storage: one entry per form under
+  `draft:1:<owner>:<scope>`, where the owner is the signed-in person's MAP id
+  (`anon` when nobody is signed in) and the scope names the thing being
+  written (`review:<id>`, `game:<gameId>:review:new`, `game:<id>`, `game:new`,
+  `stream:<id>`, `category:<id>`, `settings`).
+- `client/src/composables/useDraft.ts` is the behaviour (`useDraft` for a
+  form's fields, `useDraftText` for one text ref).
+- `client/src/components/DraftNotice.vue` is the line that says a draft was
+  found.
+
+A view adopts it in three places: the `useDraft` call, **`draft.clear()` after
+every successful save** (before any redirect), and `<DraftNotice>` above the
+form. Forget the `clear()` on a create form and the draft comes back the next
+time somebody opens "New".
+
+What it does:
+
+- When the record has loaded, the fields are snapshotted. Text equal to that
+  snapshot, or empty, removes the stored draft, so opening a form and leaving
+  never leaves one behind.
+- Typing writes the draft half a second after the last keystroke, and at once
+  when the tab is hidden or the page is left.
+- Coming back, a draft started from the same saved text is put back
+  immediately, with a notice offering Discard. A draft written against an
+  older version of the record is offered ("Use draft") and not applied.
+- A draft goes away on a successful save, on Discard, when the record is
+  deleted, on sign-out (`clearDraftsFor` in the auth store's `logout`), and
+  after seven days (`sweepDrafts`, run once in `main.ts`).
+- Storage that is blocked or full is skipped without an error. The form works
+  either way.
+
+Short one-line fields are left out on purpose, and so is anything that is not
+text (dates, switches, the chosen cover).
+
+---
 
 ## Add to calendar — Google, Outlook, `.ics` and private feeds
 

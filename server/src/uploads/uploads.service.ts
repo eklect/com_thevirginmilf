@@ -6,14 +6,17 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { ALLOWED_IMAGE_TYPES, sniffImageType } from '../common/storage/image-sniff';
 import { buildObjectKey } from '../common/storage/object-key';
 import { ObjectStorageService } from '../common/storage/object-storage.service';
 import { sanitizeFilename } from '../common/storage/safe-path';
 import { GameScreenshotEntity } from '../games/game-screenshot.entity';
 import { GameEntity } from '../games/game.entity';
+import { ReviewEntity } from '../reviews/review.entity';
 import { SiteSettingEntity } from '../settings/site-setting.entity';
+import { StreamEventEntity } from '../streams/stream-event.entity';
+import { ListUploadsQueryDto, pageUploads } from './upload-page';
 import { UploadEntity, UploadScope } from './upload.entity';
 
 export interface UploadSummary {
@@ -48,6 +51,10 @@ export class UploadsService {
     private readonly screenshots: Repository<GameScreenshotEntity>,
     @InjectRepository(SiteSettingEntity)
     private readonly settings: Repository<SiteSettingEntity>,
+    @InjectRepository(ReviewEntity)
+    private readonly reviews: Repository<ReviewEntity>,
+    @InjectRepository(StreamEventEntity)
+    private readonly streams: Repository<StreamEventEntity>,
     private readonly storage: ObjectStorageService,
   ) {}
 
@@ -124,6 +131,17 @@ export class UploadsService {
     return rows.map((row) => this.summarize(row));
   }
 
+  /** One page of the library for the picker dialog: newest first, searchable by filename. */
+  async listPage(query: ListUploadsQueryDto): Promise<{
+    uploads: UploadSummary[];
+    nextCursor: string | null;
+    hasMore: boolean;
+    total: number;
+  }> {
+    const { rows, ...page } = await pageUploads(this.repo, query);
+    return { uploads: rows.map((row) => this.summarize(row)), ...page };
+  }
+
   /**
    * Refuses while anything still points at the file.
    *
@@ -134,15 +152,36 @@ export class UploadsService {
    * worse to diagnose than a refusal. The settings check is a value match
    * rather than a join, because `site_settings` is a key/value table and
    * `headshot_upload_id` is stored as its text.
+   *
+   * ## Inline images have no foreign key
+   *
+   * The admin Markdown editor inserts a picture as
+   * `![alt](/api/uploads/<id>)`, so the reference lives inside prose, not in a
+   * column of its own. Those are found by a substring match over every
+   * Markdown column that editor writes — a review's body, a game's notes, a
+   * stream's description — and over `site_settings.value`, which holds both
+   * the id of the headshot as plain text and the About copy as Markdown. `id`
+   * has already passed `ParseUUIDPipe`, so it carries no wildcard characters
+   * of its own.
+   *
+   * The embedded address is still `/api/uploads/<id>` now that the bytes live
+   * in the bucket — the route answers a 302 to the object — so the scan looks
+   * for exactly what the editor writes. Nothing sets these to null on delete,
+   * which is the point: removing a picture a review embeds would leave a
+   * broken image on the page with nothing to say why.
    */
   async remove(id: string): Promise<void> {
     const row = await this.get(id);
-    const [covers, screenshots, settingRefs] = await Promise.all([
+    const inline = Like(`%/api/uploads/${id}%`);
+    const counts = await Promise.all([
       this.games.count({ where: { coverUploadId: id } }),
       this.screenshots.count({ where: { uploadId: id } }),
-      this.settings.count({ where: { value: id } }),
+      this.settings.count({ where: [{ value: id }, { value: inline }] }),
+      this.reviews.count({ where: { body: inline } }),
+      this.games.count({ where: { description: inline } }),
+      this.streams.count({ where: { description: inline } }),
     ]);
-    if (covers + screenshots + settingRefs > 0) {
+    if (counts.some((n) => n > 0)) {
       throw new ConflictException(
         'This image is still in use. Change or clear it there first.',
       );

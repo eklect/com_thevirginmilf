@@ -12,6 +12,7 @@
   "dependencies": {
     "@lucide/vue": "^1.46.0",
     "@tiptap/core": "^3.30.0",
+    "@tiptap/extension-image": "^3.31.3",
     "@tiptap/pm": "^3.30.0",
     "@tiptap/starter-kit": "^3.30.0",
     "@tiptap/vue-3": "^3.30.0",

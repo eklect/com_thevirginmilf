@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { Extension, InputRule } from '@tiptap/core';
+import Image from '@tiptap/extension-image';
 import StarterKit from '@tiptap/starter-kit';
 import { EditorContent, useEditor } from '@tiptap/vue-3';
 import { Markdown } from 'tiptap-markdown';
 import { FootnoteDefinition, FootnoteReference, unescapeFootnotes } from '../lib/footnotes';
-import { onBeforeUnmount, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import ImageInsertDialog from './ImageInsertDialog.vue';
 
 /**
  * The long-form editor — a review, the About page, a stream's description: a
@@ -44,10 +46,26 @@ import { onBeforeUnmount, ref, watch } from 'vue';
  * syntax; typing either form in the rich-text pane makes the node. Anything
  * the serializer still escapes on the way out, `unescapeFootnotes` puts back.
  * See `lib/footnotes.ts`.
+ *
+ * ## Images are opt-in (`adminImages`)
+ *
+ * With `admin-images` set the editor loads TipTap's image node, shows an Image
+ * button in both panes and mounts `ImageInsertDialog`, which picks from the
+ * image library or takes an address. A library image is stored as
+ * `![alt](/api/uploads/<id>)`. The prop is for staff screens under
+ * `views/admin/` only: the library is `/api/admin/uploads`, which nobody else
+ * can reach. Without it nothing here changes: no node, no button, no dialog.
+ *
+ * The node is `inline: true` because the serializer tiptap-markdown ships for
+ * it writes inline and never closes a block, so a block image came out glued
+ * to the paragraph after it. `allowBase64: false` keeps a pasted screenshot
+ * from landing in the column as a multi-megabyte `data:` URI.
  */
 const props = defineProps<{
   modelValue: string;
   placeholder?: string;
+  /** Staff screens only: the Image button and the image library. Off by default. */
+  adminImages?: boolean;
 }>();
 
 const emit = defineEmits<{ (e: 'update:modelValue', value: string): void }>();
@@ -119,6 +137,8 @@ const editor = useEditor({
     FootnoteReference,
     FootnoteDefinition,
     MarkdownLink,
+    // Read once, when the editor is made: the prop is a fixed attribute.
+    ...(props.adminImages ? [Image.configure({ inline: true, allowBase64: false })] : []),
     // `html: false` is load-bearing — it stops raw HTML being parsed out of
     // the Markdown source, which is what keeps the "no stored HTML" property
     // true end to end. MarkdownBody.vue sets the same flag on the way out.
@@ -152,6 +172,7 @@ watch(
 // round trip through TipTap at all — so switching back and forth cannot
 // normalize somebody's source out from under them.
 const raw = ref(false);
+const rawTextarea = ref<HTMLTextAreaElement | null>(null);
 
 function toggleRaw(): void {
   raw.value = !raw.value;
@@ -176,6 +197,42 @@ function setLink(): void {
   const chain = editor.value.chain().focus().extendMarkRange('link');
   if (!href) chain.unsetLink().run();
   else chain.setLink({ href }).run();
+}
+
+const imageOpen = ref(false);
+
+/**
+ * The dialog's result, placed wherever the author is working.
+ *
+ * Rich text gets a real image node. Raw mode gets the Markdown spliced into
+ * the textarea at the selection, through the same emit path as typing, so the
+ * `lastEmitted` guard still recognises the value as this component's own.
+ */
+function onImageInsert({ src, alt }: { src: string; alt: string }): void {
+  if (!raw.value) {
+    editor.value?.chain().focus().setImage({ src, alt }).run();
+    return;
+  }
+
+  const area = rawTextarea.value;
+  const current = props.modelValue || '';
+  const start = area?.selectionStart ?? current.length;
+  const end = area?.selectionEnd ?? start;
+  // Brackets and parens in the alt or address would end the syntax early.
+  const safeAlt = alt.replace(/[\[\]]/g, '\\$&');
+  const safeSrc = src.replace(/[()\s]/g, (c) => encodeURIComponent(c));
+  const snippet = `![${safeAlt}](${safeSrc})`;
+  const value = current.slice(0, start) + snippet + current.slice(end);
+
+  lastEmitted.value = value;
+  emit('update:modelValue', value);
+
+  void nextTick(() => {
+    if (!area) return;
+    const caret = start + snippet.length;
+    area.focus();
+    area.setSelectionRange(caret, caret);
+  });
 }
 
 const isActive = (name: string, attrs?: Record<string, unknown>) =>
@@ -269,8 +326,28 @@ onBeforeUnmount(() => editor.value?.destroy());
         <button type="button" :class="tb(isActive('link'))" title="Link" @click="setLink">
           🔗
         </button>
+        <button
+          v-if="adminImages"
+          type="button"
+          :class="tb(isActive('image'))"
+          title="Image"
+          @click="imageOpen = true"
+        >
+          🖼
+        </button>
       </template>
-      <span v-else class="kicker px-1">Markdown source</span>
+      <template v-else>
+        <span class="kicker px-1">Markdown source</span>
+        <button
+          v-if="adminImages"
+          type="button"
+          :class="tb()"
+          title="Image"
+          @click="imageOpen = true"
+        >
+          🖼
+        </button>
+      </template>
 
       <span class="flex-1" />
 
@@ -281,6 +358,7 @@ onBeforeUnmount(() => editor.value?.destroy());
 
     <textarea
       v-if="raw"
+      ref="rawTextarea"
       :value="modelValue"
       class="min-h-[22rem] w-full resize-y bg-transparent px-4 py-3 font-mono text-[13px] leading-relaxed focus:outline-none"
       spellcheck="false"
@@ -288,6 +366,8 @@ onBeforeUnmount(() => editor.value?.destroy());
       @input="onRawInput"
     />
     <EditorContent v-else :editor="editor" class="px-4 py-3" />
+
+    <ImageInsertDialog v-if="adminImages" v-model:open="imageOpen" @insert="onImageInsert" />
   </div>
 </template>
 

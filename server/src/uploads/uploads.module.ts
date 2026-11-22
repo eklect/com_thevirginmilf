@@ -6,7 +6,9 @@ import { AdminUploadsController } from '../admin/admin-uploads.controller';
 import { ObjectStorageService } from '../common/storage/object-storage.service';
 import { GameScreenshotEntity } from '../games/game-screenshot.entity';
 import { GameEntity } from '../games/game.entity';
+import { ReviewEntity } from '../reviews/review.entity';
 import { SiteSettingEntity } from '../settings/site-setting.entity';
+import { StreamEventEntity } from '../streams/stream-event.entity';
 import { UploadEntity } from './upload.entity';
 import { UploadsController } from './uploads.controller';
 import { UploadsService } from './uploads.service';
@@ -40,6 +42,8 @@ import { UploadsService } from './uploads.service';
       UploadEntity,
       GameEntity,
       GameScreenshotEntity,
+      ReviewEntity,
+      StreamEventEntity,
       SiteSettingEntity,
     ]),
     MulterModule.registerAsync({

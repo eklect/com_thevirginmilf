@@ -9,6 +9,8 @@ import StarRating from '../../components/StarRating.vue';
 import ConfirmButton from './ConfirmButton.vue';
 import { fromLocalInput, toLocalInput } from './datetime';
 import { useSaveNotice } from './useSaveNotice';
+import { useDraft } from '../../composables/useDraft';
+import DraftNotice from '../../components/DraftNotice.vue';
 
 /**
  * Writes or edits one review.
@@ -29,11 +31,20 @@ const form = ref({ title: '', body: '', isPublished: false, publishedAt: '' });
 const error = ref('');
 const busy = ref(false);
 
+// Keeps the long text in this browser until the save goes through.
+const draftReady = ref(false);
+const draft = useDraft(
+  () => (reviewId ? `review:${reviewId}` : `game:${newForGameId ?? ''}:review:new`),
+  form,
+  ['body'],
+  { ready: draftReady },
+);
+
 // Stays on the page after saving: a review is long, and "save and keep
 // writing" is the ordinary way to write one.
 const { notice, alertEl, revealAlert, flagSaved, flashSaved, clearNotice } = useSaveNotice(form);
 
-onMounted(async () => {
+async function load(): Promise<void> {
   try {
     if (reviewId) {
       const data = await api.get<{ review: Review; game: { id: string; slug: string; title: string } }>(
@@ -56,6 +67,12 @@ onMounted(async () => {
   } catch (e) {
     error.value = errorMessage(e);
   }
+}
+
+onMounted(async () => {
+  await load();
+  // Drafts start from what was loaded; a failed load has nothing to start from.
+  draftReady.value = !error.value;
 });
 
 /** The rating saves on its own, at once — it is the game's, not this form's. */
@@ -87,9 +104,11 @@ async function save() {
     if (reviewId) {
       const { review } = await api.put<{ review: Review }>(`/api/admin/reviews/${reviewId}`, body);
       form.value.publishedAt = toLocalInput(review.publishedAt);
+      draft.clear();
       await flagSaved(review.isPublished ? 'Saved. It is live on the game’s page.' : 'Draft saved.');
     } else {
       const { review } = await api.post<{ review: Review }>(`/api/admin/games/${game.value.id}/reviews`, body);
+      draft.clear();
       flashSaved(
         review.isPublished ? 'Review published.' : 'Draft saved. Tick “Published” when it is ready.',
         `/admin/reviews/${review.id}`,
@@ -109,6 +128,7 @@ async function remove() {
   busy.value = true;
   try {
     await api.delete(`/api/admin/reviews/${reviewId}`);
+    draft.clear();
     flashSaved('Review deleted.', `/admin/games/${game.value.id}`);
     void router.push(`/admin/games/${game.value.id}`);
   } catch (e) {
@@ -139,6 +159,7 @@ async function remove() {
     </p>
   </div>
 
+  <DraftNotice :draft="draft" class="mt-5" />
   <form class="mt-7 max-w-3xl space-y-5" @submit.prevent="save">
     <div>
       <label for="title" class="kicker block">Headline</label>
@@ -147,7 +168,7 @@ async function remove() {
 
     <div>
       <label class="kicker block">Review</label>
-      <MarkdownEditor v-model="form.body" class="mt-1.5" />
+      <MarkdownEditor v-model="form.body" admin-images class="mt-1.5" />
     </div>
 
     <div class="grid gap-5 sm:grid-cols-2">
