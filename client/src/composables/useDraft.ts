@@ -38,6 +38,14 @@ import { hashFields, readDraft, removeDraft, writeDraft } from '../lib/drafts';
  * draft instead of writing one, so opening an edit form and leaving never
  * leaves a draft behind.
  *
+ * ## Only typing makes a draft
+ *
+ * A field that changes while nobody has pressed a key, pasted, dropped or
+ * clicked since the baseline was taken was changed by code: a composer
+ * emptied after posting, a form refilled after its save, a rich editor
+ * re-emitting the text it was given in its own spelling. Those move the
+ * baseline and store nothing.
+ *
  * ## Coming back
  *
  * Decided once, at that same moment:
@@ -75,6 +83,33 @@ export interface DraftHandle {
   clear(): void;
 }
 
+/**
+ * Counts things a person does to the page. A field that changes with no such
+ * event since its baseline was taken was changed by code, not by typing.
+ */
+let inputSeq = 0;
+let listening = false;
+
+function listenForInput(): void {
+  if (listening || typeof document === 'undefined') return;
+  listening = true;
+  const mark = (): void => {
+    inputSeq += 1;
+  };
+  for (const type of ['keydown', 'input', 'compositionend', 'paste', 'cut', 'drop', 'pointerdown']) {
+    document.addEventListener(type, mark, true);
+  }
+}
+
+/** An editor that has been emptied still holds markup; none of these is writing. */
+const EMPTY_VALUES = new Set(['', 'null', '<br>', '<p></p>', '<p><br></p>']);
+const EMPTY_DOC = /^\{"type":"doc"(,"content":\[(\{"type":"paragraph"\})?\])?\}$/;
+
+function isBlank(text: string): boolean {
+  const trimmed = text.trim();
+  return EMPTY_VALUES.has(trimmed) || EMPTY_DOC.test(trimmed);
+}
+
 interface FieldAccess {
   read(): Record<string, string>;
   /** Puts draft text into the form. */
@@ -102,8 +137,10 @@ function createDraft(
 
   const same = (a: Record<string, string>, b: Record<string, string>): boolean =>
     Object.keys(a).every((name) => a[name] === b[name]);
-  const blank = (fields: Record<string, string>): boolean =>
-    Object.values(fields).every((text) => text.trim() === '' || text === 'null');
+  const blank = (fields: Record<string, string>): boolean => Object.values(fields).every(isBlank);
+  /** `inputSeq` when the baseline was taken. */
+  let baselineSeq = 0;
+  listenForInput();
 
   function cancelTimer(): void {
     if (timer !== null) clearTimeout(timer);
@@ -113,6 +150,7 @@ function createDraft(
   function rebase(): void {
     baseline = access.read();
     restoreBaseline = access.capture();
+    baselineSeq = inputSeq;
   }
 
   function store(): void {
@@ -188,6 +226,15 @@ function createDraft(
       // Putting a draft back must not rewrite it with a fresh timestamp.
       if (placed && same(current, placed)) return;
       placed = null;
+      // Nobody has touched the page since the baseline: this is the form
+      // being reset after a save, refilled from the server, or an editor
+      // re-emitting its own normalised text. That is the new saved text, not
+      // a draft, and writing it would bring it back as one.
+      if (inputSeq === baselineSeq) {
+        cancelTimer();
+        rebase();
+        return;
+      }
       cancelTimer();
       timer = setTimeout(store, delay);
     },
