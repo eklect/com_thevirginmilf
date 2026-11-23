@@ -35,15 +35,19 @@ function toNumber(value: SortValue): number | null {
 }
 
 /**
- * Ascending comparison of two present values. Strings use `localeCompare`
- * rather than `<`, which would put every capital ahead of every lowercase
- * letter; `numeric` puts "Episode 9" before "Episode 10".
+ * One collator for every comparison: `localeCompare` with options builds a new
+ * one per call, which is slow on a list of thousands. Locale-aware rather than
+ * `<`, which would put every capital ahead of every lowercase letter;
+ * `numeric` puts "Episode 9" before "Episode 10".
  */
+const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+
+/** Ascending comparison of two present values. */
 export function compareValues(a: SortValue, b: SortValue): number {
   const na = toNumber(a);
   const nb = toNumber(b);
   if (na !== null && nb !== null) return na - nb;
-  return String(a).localeCompare(String(b), undefined, { sensitivity: 'base', numeric: true });
+  return collator.compare(String(a), String(b));
 }
 
 /**
