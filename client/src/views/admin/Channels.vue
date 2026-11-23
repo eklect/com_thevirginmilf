@@ -6,6 +6,9 @@ import { useSiteStore } from '../../stores/site';
 import ConfirmButton from './ConfirmButton.vue';
 import { useCollection } from './useCollection';
 import { useSaveNotice } from './useSaveNotice';
+import SortButton from '@/components/table/SortButton.vue';
+import SortedNotice from '@/components/table/SortedNotice.vue';
+import { useSortableTable } from '@/composables/useSortableTable';
 
 const site = useSiteStore();
 const collection = useCollection<AdminChannel>('channels', 'channels');
@@ -28,6 +31,17 @@ onMounted(async () => {
 
 // Shows the confirmation the editor left behind on its way here.
 const { notice } = useSaveNotice();
+
+const sort = useSortableTable(
+  () => collection.items.value,
+  {
+    name: (row: AdminChannel) => row.name,
+    platform: (row: AdminChannel) => PLATFORM_LABELS[row.platform],
+    usedFor: (row: AdminChannel) => [row.isStreamChannel ? 'Streams' : null, row.showOnLinks ? 'Links page' : null].filter(Boolean).join(' · '),
+    published: (row: AdminChannel) => row.isPublished,
+  },
+  { storageKey: 'admin-channels' },
+);
 </script>
 
 <template>
@@ -43,20 +57,31 @@ const { notice } = useSaveNotice();
   <p v-if="collection.error.value" class="notice-error mt-5">{{ collection.error.value }}</p>
   <p v-if="notice" role="status" class="notice mt-5">{{ notice }}</p>
 
+  <SortedNotice :table="sort" />
   <div class="overflow-x-auto">
     <table class="mt-7 w-full min-w-[680px] text-sm">
       <thead>
         <tr class="border-y border-border text-left">
-          <th class="kicker py-2.5">Channel</th>
-          <th class="kicker w-28 py-2.5">Platform</th>
-          <th class="kicker w-44 py-2.5">Used for</th>
-          <th class="kicker w-24 py-2.5">Published</th>
+          <th class="kicker py-2.5 w-10 pr-4 text-right">#</th>
+          <th class="kicker py-2.5" :aria-sort="sort.ariaSort('name')">
+            <SortButton :table="sort" column="name">Channel</SortButton>
+          </th>
+          <th class="kicker w-28 py-2.5" :aria-sort="sort.ariaSort('platform')">
+            <SortButton :table="sort" column="platform">Platform</SortButton>
+          </th>
+          <th class="kicker w-44 py-2.5" :aria-sort="sort.ariaSort('usedFor')">
+            <SortButton :table="sort" column="usedFor">Used for</SortButton>
+          </th>
+          <th class="kicker w-24 py-2.5" :aria-sort="sort.ariaSort('published')">
+            <SortButton :table="sort" column="published">Published</SortButton>
+          </th>
           <th class="kicker w-20 py-2.5">Order</th>
           <th class="kicker w-32 py-2.5"></th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(item, i) in collection.items.value" :key="item.id" class="border-b border-border align-top">
+        <tr v-for="(item, i) in sort.sorted.value" :key="item.id" class="border-b border-border align-top">
+          <td class="py-3 pr-4 text-right text-xs tabular-nums text-muted">{{ i + 1 }}</td>
           <td class="py-3 pr-4">
             <RouterLink :to="`/admin/channels/${item.id}`" class="font-semibold no-underline hover:underline">
               {{ item.name }}
@@ -81,8 +106,8 @@ const { notice } = useSaveNotice();
             </button>
           </td>
           <td class="py-3">
-            <button type="button" class="kicker px-1 hover:text-text" :disabled="i === 0" aria-label="Move up" @click="collection.move(item.id, -1)">↑</button>
-            <button type="button" class="kicker px-1 hover:text-text" :disabled="i === collection.items.value.length - 1" aria-label="Move down" @click="collection.move(item.id, 1)">↓</button>
+            <button type="button" class="kicker px-1 hover:text-text" :disabled="sort.isSorted.value || i === 0" aria-label="Move up" @click="collection.move(item.id, -1)">↑</button>
+            <button type="button" class="kicker px-1 hover:text-text" :disabled="sort.isSorted.value || i === collection.items.value.length - 1" aria-label="Move down" @click="collection.move(item.id, 1)">↓</button>
           </td>
           <td class="py-3 text-right">
             <ConfirmButton :disabled="collection.busy.value" @confirm="collection.remove(item.id)" />

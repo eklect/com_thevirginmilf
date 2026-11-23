@@ -2,6 +2,8 @@
 import { onMounted, ref } from 'vue';
 import { api, errorMessage } from '../../api/client';
 import { formatDate, type SubscriberRow } from '../../api/types';
+import SortButton from '@/components/table/SortButton.vue';
+import { useSortableTable } from '@/composables/useSortableTable';
 
 interface Payload {
   summary: { total: number; subscribed: number; suppressed: number };
@@ -30,6 +32,16 @@ const QUEUE_LABELS: Record<string, string> = {
   expired: 'Expired unsent',
   dead: 'Gave up',
 };
+
+const sort = useSortableTable(
+  () => data.value?.subscribers ?? [],
+  {
+    email: (row: SubscriberRow) => row.email,
+    alerts: (row: SubscriberRow) => row.suppressedAt ? 0 : row.isSubscribed ? 2 : 1,
+    joined: (row: SubscriberRow) => row.createdAt,
+  },
+  { storageKey: 'admin-subscribers' },
+);
 </script>
 
 <template>
@@ -88,13 +100,21 @@ const QUEUE_LABELS: Record<string, string> = {
     <table class="mt-10 w-full text-sm">
       <thead>
         <tr class="border-y border-border text-left">
-          <th class="kicker py-2.5">Email</th>
-          <th class="kicker w-32 py-2.5">Email alerts</th>
-          <th class="kicker w-40 py-2.5">Joined</th>
+          <th class="kicker py-2.5 w-10 pr-4 text-right">#</th>
+          <th class="kicker py-2.5" :aria-sort="sort.ariaSort('email')">
+            <SortButton :table="sort" column="email">Email</SortButton>
+          </th>
+          <th class="kicker w-32 py-2.5" :aria-sort="sort.ariaSort('alerts')">
+            <SortButton :table="sort" column="alerts">Email alerts</SortButton>
+          </th>
+          <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('joined')">
+            <SortButton :table="sort" column="joined">Joined</SortButton>
+          </th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in data.subscribers" :key="row.id" class="border-b border-border">
+        <tr v-for="(row, rowIndex) in sort.sorted.value" :key="row.id" class="border-b border-border">
+          <td class="py-3 pr-4 text-right text-xs tabular-nums text-muted">{{ rowIndex + 1 }}</td>
           <td class="py-3">{{ row.email }}</td>
           <td class="py-3">
             <span v-if="row.suppressedAt" class="kicker !text-danger">Bouncing</span>

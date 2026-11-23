@@ -3,6 +3,9 @@ import { computed, onMounted, ref } from 'vue';
 import { api, errorMessage } from '../../api/client';
 import { NON_NESTABLE_PAGE_KEYS, type PageKey, type PageSetting } from '../../api/types';
 import { useSiteStore } from '../../stores/site';
+import SortButton from '@/components/table/SortButton.vue';
+import SortedNotice from '@/components/table/SortedNotice.vue';
+import { useSortableTable } from '@/composables/useSortableTable';
 
 const site = useSiteStore();
 const pages = ref<PageSetting[]>([]);
@@ -47,6 +50,27 @@ const rows = computed(() => {
   }
   return out;
 });
+
+/**
+ * A column sort flattens the tree into one list (the Parent column still says
+ * where each sits); unsorted, it is the nav's own grouped order.
+ */
+const sort = useSortableTable(
+  () => pages.value,
+  {
+    page: (row: PageSetting) => row.key,
+    navLabel: (row: PageSetting) => row.navLabel,
+    parent: (row: PageSetting) => pages.value.find((p) => p.key === row.parentKey)?.navLabel ?? '',
+    shown: (row: PageSetting) => row.enabled,
+  },
+  { storageKey: 'admin-pages' },
+);
+
+const display = computed(() =>
+  sort.isSorted.value
+    ? sort.sorted.value.map((page) => ({ page, depth: 0 as const, siblings: [] as PageSetting[] }))
+    : rows.value,
+);
 
 async function put(key: string, patch: Partial<PageSetting>) {
   error.value = '';
@@ -94,18 +118,29 @@ async function move(page: PageSetting, siblings: PageSetting[], direction: -1 | 
 
   <p v-if="error" class="mt-5 border border-danger px-4 py-3 text-sm text-danger">{{ error }}</p>
 
+  <SortedNotice :table="sort" />
   <table class="mt-7 w-full max-w-4xl text-sm">
     <thead>
       <tr class="border-y border-border text-left">
-        <th class="kicker py-2.5">Page</th>
-        <th class="kicker w-48 py-2.5">Nav label</th>
-        <th class="kicker w-44 py-2.5">Parent</th>
-        <th class="kicker w-24 py-2.5">Shown</th>
+        <th class="kicker w-10 py-2.5 pr-4 text-right">#</th>
+        <th class="kicker py-2.5" :aria-sort="sort.ariaSort('page')">
+          <SortButton :table="sort" column="page">Page</SortButton>
+        </th>
+        <th class="kicker w-48 py-2.5" :aria-sort="sort.ariaSort('navLabel')">
+          <SortButton :table="sort" column="navLabel">Nav label</SortButton>
+        </th>
+        <th class="kicker w-44 py-2.5" :aria-sort="sort.ariaSort('parent')">
+          <SortButton :table="sort" column="parent">Parent</SortButton>
+        </th>
+        <th class="kicker w-24 py-2.5" :aria-sort="sort.ariaSort('shown')">
+          <SortButton :table="sort" column="shown">Shown</SortButton>
+        </th>
         <th class="kicker w-24 py-2.5">Order</th>
       </tr>
     </thead>
     <tbody>
-      <tr v-for="row in rows" :key="row.page.key" class="border-b border-border">
+      <tr v-for="(row, rowIndex) in display" :key="row.page.key" class="border-b border-border">
+        <td class="py-3 pr-4 text-right text-xs tabular-nums text-muted">{{ rowIndex + 1 }}</td>
         <td class="py-3 capitalize" :class="{ 'pl-6 text-muted': row.depth === 1 }">
           <span v-if="row.depth === 1" aria-hidden="true" class="mr-1.5">↳</span>{{ row.page.key }}
         </td>
@@ -156,7 +191,7 @@ async function move(page: PageSetting, siblings: PageSetting[], direction: -1 | 
           <button
             type="button"
             class="kicker px-1 hover:text-text"
-            :disabled="busy || row.siblings[0]?.key === row.page.key"
+            :disabled="sort.isSorted.value || busy || row.siblings[0]?.key === row.page.key"
             @click="move(row.page, row.siblings, -1)"
           >
             ↑
@@ -164,7 +199,7 @@ async function move(page: PageSetting, siblings: PageSetting[], direction: -1 | 
           <button
             type="button"
             class="kicker px-1 hover:text-text"
-            :disabled="busy || row.siblings[row.siblings.length - 1]?.key === row.page.key"
+            :disabled="sort.isSorted.value || busy || row.siblings[row.siblings.length - 1]?.key === row.page.key"
             @click="move(row.page, row.siblings, 1)"
           >
             ↓

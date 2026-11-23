@@ -6,6 +6,8 @@ import { api, errorMessage } from '../../api/client';
 import { formatHours, type AdminGame } from '../../api/types';
 import StarRating from '../../components/StarRating.vue';
 import { useSaveNotice } from './useSaveNotice';
+import SortButton from '@/components/table/SortButton.vue';
+import { useSortableTable } from '@/composables/useSortableTable';
 
 /**
  * The library, with the three things she does most to a game right on the
@@ -87,6 +89,19 @@ onMounted(load);
 
 // Shows the confirmation the editor left behind on its way here.
 const { notice } = useSaveNotice();
+
+const sort = useSortableTable(
+  () => shown.value,
+  {
+    title: (row: AdminGame) => row.title,
+    played: (row: AdminGame) => row.playtimeHours,
+    rating: (row: AdminGame) => row.rating,
+    favorite: (row: AdminGame) => row.isFavorite,
+    onSite: (row: AdminGame) => !row.isHidden,
+    reviews: (row: AdminGame) => row.reviewCount,
+  },
+  { storageKey: 'admin-games' },
+);
 </script>
 
 <template>
@@ -125,21 +140,35 @@ const { notice } = useSaveNotice();
     <table v-if="shown.length" class="mt-6 w-full min-w-[820px] text-sm">
       <thead>
         <tr class="border-y border-border text-left">
-          <th class="kicker py-2.5">Game</th>
-          <th class="kicker w-28 py-2.5">Played</th>
-          <th class="kicker w-56 py-2.5">Her rating</th>
-          <th class="kicker w-20 py-2.5 text-center">Heart</th>
-          <th class="kicker w-24 py-2.5 text-center">On site</th>
-          <th class="kicker w-24 py-2.5 text-right">Reviews</th>
+          <th class="kicker py-2.5 w-10 pr-4 text-right">#</th>
+          <th class="kicker py-2.5" :aria-sort="sort.ariaSort('title')">
+            <SortButton :table="sort" column="title">Game</SortButton>
+          </th>
+          <th class="kicker w-28 py-2.5" :aria-sort="sort.ariaSort('played')">
+            <SortButton :table="sort" column="played">Played</SortButton>
+          </th>
+          <th class="kicker w-56 py-2.5" :aria-sort="sort.ariaSort('rating')">
+            <SortButton :table="sort" column="rating">Her rating</SortButton>
+          </th>
+          <th class="kicker w-20 py-2.5 text-center" :aria-sort="sort.ariaSort('favorite')">
+            <SortButton :table="sort" column="favorite">Heart</SortButton>
+          </th>
+          <th class="kicker w-24 py-2.5 text-center" :aria-sort="sort.ariaSort('onSite')">
+            <SortButton :table="sort" column="onSite">On site</SortButton>
+          </th>
+          <th class="kicker w-24 py-2.5 text-right" :aria-sort="sort.ariaSort('reviews')">
+            <SortButton :table="sort" column="reviews">Reviews</SortButton>
+          </th>
         </tr>
       </thead>
       <tbody>
         <tr
-          v-for="game in shown"
+          v-for="(game, rowIndex) in sort.sorted.value"
           :key="game.id"
           class="border-b border-border align-middle"
           :class="game.isHidden ? 'bg-surface-alt text-muted' : ''"
         >
+          <td class="py-2.5 pr-4 text-right text-xs tabular-nums text-muted">{{ rowIndex + 1 }}</td>
           <td class="py-2.5 pr-4">
             <div class="flex items-center gap-3">
               <img

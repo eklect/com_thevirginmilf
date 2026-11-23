@@ -13,6 +13,8 @@ import {
   type VideoConnectionStatus,
 } from '../../api/types';
 import ConfirmButton from './ConfirmButton.vue';
+import SortButton from '@/components/table/SortButton.vue';
+import { useSortableTable } from '@/composables/useSortableTable';
 
 /**
  * The past videos on the Live page: the keys the sync reads Twitch and
@@ -193,6 +195,15 @@ const anyConnected = computed(
 
 onMounted(() => Promise.all([loadStatus(), loadVideos()]));
 onBeforeUnmount(() => window.clearTimeout(timer));
+
+const sort = useSortableTable(
+  () => shown.value,
+  {
+    title: (row: AdminVideo) => row.titleOverride || row.sourceTitle,
+    source: (row: AdminVideo) => SOURCE_LABELS[row.source],
+  },
+  { storageKey: 'admin-videos' },
+);
 </script>
 
 <template>
@@ -437,14 +448,20 @@ onBeforeUnmount(() => window.clearTimeout(timer));
     <table v-if="shown.length" class="mt-4 w-full min-w-[760px] text-sm">
       <thead>
         <tr class="border-b border-border text-left">
+          <th class="kicker py-2.5 w-10 pr-4 text-right">#</th>
           <th class="kicker w-32 py-2.5"></th>
-          <th class="kicker py-2.5">Title</th>
-          <th class="kicker w-40 py-2.5">From</th>
+          <th class="kicker py-2.5" :aria-sort="sort.ariaSort('title')">
+            <SortButton :table="sort" column="title">Title</SortButton>
+          </th>
+          <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('source')">
+            <SortButton :table="sort" column="source">From</SortButton>
+          </th>
           <th class="kicker w-36 py-2.5"></th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="video in shown" :key="video.id" class="border-b border-border align-top">
+        <tr v-for="(video, rowIndex) in sort.sorted.value" :key="video.id" class="border-b border-border align-top">
+          <td class="py-3 pr-4 text-right text-xs tabular-nums text-muted">{{ rowIndex + 1 }}</td>
           <td class="py-3 pr-4">
             <img v-if="video.thumbnailUrl" :src="video.thumbnailUrl" alt="" loading="lazy" referrerpolicy="no-referrer" class="aspect-video w-28 object-cover" />
             <div v-else class="aspect-video w-28 bg-surface-alt"></div>

@@ -4,6 +4,8 @@ import { RouterLink } from 'vue-router';
 import { api, errorMessage } from '../../api/client';
 import { formatDateTime, type AdminStream } from '../../api/types';
 import ConfirmButton from './ConfirmButton.vue';
+import SortButton from '@/components/table/SortButton.vue';
+import { useSortableTable } from '@/composables/useSortableTable';
 import { useSaveNotice } from './useSaveNotice';
 
 /**
@@ -65,8 +67,26 @@ function alertState(stream: AdminStream): string {
   return isPast(stream) ? 'Not announced' : 'Announcing shortly';
 }
 
+/** How far along its alerts a stream is, for sorting the Alerts column. */
+function alertRank(stream: AdminStream): number {
+  if (!stream.isPublished) return 0;
+  if (!stream.notify) return 1;
+  if (stream.remindedStartAt) return 4;
+  if (stream.announcedAt) return 3;
+  return 2;
+}
+
 const upcoming = computed(() => streams.value.filter((stream) => !isPast(stream)).reverse());
 const past = computed(() => streams.value.filter(isPast));
+
+const streamColumns = {
+  title: (row: AdminStream) => row.title,
+  startsAt: (row: AdminStream) => row.startsAt,
+  alerts: (row: AdminStream) => alertRank(row),
+  published: (row: AdminStream) => row.isPublished,
+};
+const upcomingSort = useSortableTable(() => upcoming.value, streamColumns, { storageKey: 'admin-streams-upcoming' });
+const pastSort = useSortableTable(() => past.value, streamColumns, { storageKey: 'admin-streams-past' });
 
 onMounted(load);
 
@@ -88,22 +108,32 @@ const { notice } = useSaveNotice();
   <!-- Set by the editor just before it navigated back here. -->
   <p v-if="notice" role="status" class="notice mt-5">{{ notice }}</p>
 
-  <template v-for="group in [{ title: 'Coming up', rows: upcoming }, { title: 'Past', rows: past }]" :key="group.title">
+  <template v-for="group in [{ title: 'Coming up', rows: upcoming, sort: upcomingSort }, { title: 'Past', rows: past, sort: pastSort }]" :key="group.title">
     <template v-if="group.rows.length">
       <h2 class="kicker masthead-rule mt-9 pt-4">{{ group.title }}</h2>
       <div class="overflow-x-auto">
         <table class="mt-3 w-full min-w-[640px] text-sm">
           <thead>
             <tr class="border-b border-border text-left">
-              <th class="kicker py-2.5">Stream</th>
-              <th class="kicker w-48 py-2.5">When</th>
-              <th class="kicker w-52 py-2.5">Alerts</th>
-              <th class="kicker w-28 py-2.5">Calendar</th>
+              <th class="kicker w-10 py-2.5 pr-4 text-right">#</th>
+              <th class="kicker py-2.5" :aria-sort="group.sort.ariaSort('title')">
+                <SortButton :table="group.sort" column="title">Stream</SortButton>
+              </th>
+              <th class="kicker w-48 py-2.5" :aria-sort="group.sort.ariaSort('startsAt')">
+                <SortButton :table="group.sort" column="startsAt">When</SortButton>
+              </th>
+              <th class="kicker w-52 py-2.5" :aria-sort="group.sort.ariaSort('alerts')">
+                <SortButton :table="group.sort" column="alerts">Alerts</SortButton>
+              </th>
+              <th class="kicker w-28 py-2.5" :aria-sort="group.sort.ariaSort('published')">
+                <SortButton :table="group.sort" column="published">Calendar</SortButton>
+              </th>
               <th class="kicker w-32 py-2.5"></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="stream in group.rows" :key="stream.id" class="border-b border-border align-top">
+            <tr v-for="(stream, rowIndex) in group.sort.sorted.value" :key="stream.id" class="border-b border-border align-top">
+              <td class="py-3 pr-4 text-right text-xs tabular-nums text-muted">{{ rowIndex + 1 }}</td>
               <td class="py-3 pr-4">
                 <RouterLink :to="`/admin/streams/${stream.id}`" class="font-semibold no-underline hover:underline">
                   {{ stream.title }}

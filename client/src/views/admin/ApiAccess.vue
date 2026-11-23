@@ -23,6 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import SortButton from '@/components/table/SortButton.vue';
+import { useSortableTable } from '@/composables/useSortableTable';
 
 /**
  * The keys this site has issued to other servers â€” today, the Email Templates
@@ -109,6 +111,18 @@ const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'â€
 
 /** What the Email Templates tool asks for as the API address: this site's origin plus /api. */
 const apiAddress = `${window.location.origin}/api`;
+
+const sort = useSortableTable(
+  () => items.value,
+  {
+    name: (row: ApiClient) => row.name,
+    clientId: (row: ApiClient) => row.clientId,
+    scopes: (row: ApiClient) => row.scopes.join(', '),
+    lastUsed: (row: ApiClient) => row.lastUsedAt,
+    status: (row: ApiClient) => row.revokedAt ? 1 : 0,
+  },
+  { storageKey: 'admin-api-access' },
+);
 </script>
 
 <template>
@@ -141,16 +155,28 @@ const apiAddress = `${window.location.origin}/api`;
   <Table class="mt-7">
     <TableHeader>
       <TableRow>
-        <TableHead class="kicker">Name</TableHead>
-        <TableHead class="kicker">Client id</TableHead>
-        <TableHead class="kicker">Scopes</TableHead>
-        <TableHead class="kicker w-40">Last used</TableHead>
-        <TableHead class="kicker w-32">Status</TableHead>
+        <TableHead class="kicker w-10 pr-4 text-right">#</TableHead>
+        <TableHead class="kicker" :aria-sort="sort.ariaSort('name')">
+          <SortButton :table="sort" column="name">Name</SortButton>
+        </TableHead>
+        <TableHead class="kicker" :aria-sort="sort.ariaSort('clientId')">
+          <SortButton :table="sort" column="clientId">Client id</SortButton>
+        </TableHead>
+        <TableHead class="kicker" :aria-sort="sort.ariaSort('scopes')">
+          <SortButton :table="sort" column="scopes">Scopes</SortButton>
+        </TableHead>
+        <TableHead class="kicker w-40" :aria-sort="sort.ariaSort('lastUsed')">
+          <SortButton :table="sort" column="lastUsed">Last used</SortButton>
+        </TableHead>
+        <TableHead class="kicker w-32" :aria-sort="sort.ariaSort('status')">
+          <SortButton :table="sort" column="status">Status</SortButton>
+        </TableHead>
         <TableHead class="w-24" />
       </TableRow>
     </TableHeader>
     <TableBody>
-      <TableRow v-for="item in items" :key="item.id" :class="item.revokedAt ? 'opacity-60' : ''">
+      <TableRow v-for="(item, rowIndex) in sort.sorted.value" :key="item.id" :class="item.revokedAt ? 'opacity-60' : ''">
+        <TableCell class="text-right text-xs tabular-nums text-muted">{{ rowIndex + 1 }}</TableCell>
         <TableCell class="whitespace-normal">
           {{ item.name }}
           <span class="block text-xs text-muted">Created {{ when(item.createdAt) }}</span>
