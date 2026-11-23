@@ -3,7 +3,7 @@ import { Eye, EyeOff, Heart } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { api, errorMessage } from '../../api/client';
-import { formatHours, type AdminGame } from '../../api/types';
+import { formatDateTime, formatHours, type AdminGame } from '../../api/types';
 import StarRating from '../../components/StarRating.vue';
 import { useSaveNotice } from './useSaveNotice';
 import SortButton from '@/components/table/SortButton.vue';
@@ -99,6 +99,8 @@ const sort = useSortableTable(
     favorite: (row: AdminGame) => row.isFavorite,
     onSite: (row: AdminGame) => !row.isHidden,
     reviews: (row: AdminGame) => row.reviewCount,
+    created: (row: AdminGame) => row.createdAt,
+    updated: (row: AdminGame) => row.updatedAt,
   },
   { storageKey: 'admin-games' },
 );
@@ -137,10 +139,9 @@ const sort = useSortableTable(
   </div>
 
   <div class="overflow-x-auto">
-    <table v-if="shown.length" class="mt-6 w-full min-w-[820px] text-sm">
+    <table v-if="shown.length" class="mt-6 w-full min-w-[1140px] text-sm">
       <thead>
         <tr class="border-y border-border text-left">
-          <th class="kicker py-2.5 w-10 pr-4 text-right">#</th>
           <th class="kicker py-2.5" :aria-sort="sort.ariaSort('title')">
             <SortButton :table="sort" column="title">Game</SortButton>
           </th>
@@ -159,16 +160,21 @@ const sort = useSortableTable(
           <th class="kicker w-24 py-2.5 text-right" :aria-sort="sort.ariaSort('reviews')">
             <SortButton :table="sort" column="reviews">Reviews</SortButton>
           </th>
+          <th class="kicker w-40 py-2.5 pl-4" :aria-sort="sort.ariaSort('created')">
+            <SortButton :table="sort" column="created">Created</SortButton>
+          </th>
+          <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('updated')">
+            <SortButton :table="sort" column="updated">Updated</SortButton>
+          </th>
         </tr>
       </thead>
       <tbody>
         <tr
-          v-for="(game, rowIndex) in sort.sorted.value"
+          v-for="game in sort.sorted.value"
           :key="game.id"
           class="border-b border-border align-middle"
           :class="game.isHidden ? 'bg-surface-alt text-muted' : ''"
         >
-          <td class="py-2.5 pr-4 text-right text-xs tabular-nums text-muted">{{ rowIndex + 1 }}</td>
           <td class="py-2.5 pr-4">
             <div class="flex items-center gap-3">
               <img
@@ -232,6 +238,8 @@ const sort = useSortableTable(
               {{ game.reviewCount || 'Write one' }}
             </RouterLink>
           </td>
+          <td class="py-2.5 pl-4 pr-4 text-xs text-muted">{{ formatDateTime(game.createdAt) || '—' }}</td>
+          <td class="py-2.5 text-xs text-muted">{{ formatDateTime(game.updatedAt) || '—' }}</td>
         </tr>
       </tbody>
     </table>

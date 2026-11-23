@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { api, errorMessage } from '../../api/client';
-import { NON_NESTABLE_PAGE_KEYS, type PageKey, type PageSetting } from '../../api/types';
+import { NON_NESTABLE_PAGE_KEYS, formatDateTime, type PageKey, type PageSetting } from '../../api/types';
 import { useSiteStore } from '../../stores/site';
 import SortButton from '@/components/table/SortButton.vue';
 import SortedNotice from '@/components/table/SortedNotice.vue';
@@ -62,6 +62,7 @@ const sort = useSortableTable(
     navLabel: (row: PageSetting) => row.navLabel,
     parent: (row: PageSetting) => pages.value.find((p) => p.key === row.parentKey)?.navLabel ?? '',
     shown: (row: PageSetting) => row.enabled,
+    updated: (row: PageSetting) => row.updatedAt ?? null,
   },
   { storageKey: 'admin-pages' },
 );
@@ -119,10 +120,9 @@ async function move(page: PageSetting, siblings: PageSetting[], direction: -1 | 
   <p v-if="error" class="mt-5 border border-danger px-4 py-3 text-sm text-danger">{{ error }}</p>
 
   <SortedNotice :table="sort" />
-  <table class="mt-7 w-full max-w-4xl text-sm">
+  <table class="mt-7 w-full max-w-5xl text-sm">
     <thead>
       <tr class="border-y border-border text-left">
-        <th class="kicker w-10 py-2.5 pr-4 text-right">#</th>
         <th class="kicker py-2.5" :aria-sort="sort.ariaSort('page')">
           <SortButton :table="sort" column="page">Page</SortButton>
         </th>
@@ -135,12 +135,14 @@ async function move(page: PageSetting, siblings: PageSetting[], direction: -1 | 
         <th class="kicker w-24 py-2.5" :aria-sort="sort.ariaSort('shown')">
           <SortButton :table="sort" column="shown">Shown</SortButton>
         </th>
+        <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('updated')">
+          <SortButton :table="sort" column="updated">Updated</SortButton>
+        </th>
         <th class="kicker w-24 py-2.5">Order</th>
       </tr>
     </thead>
     <tbody>
-      <tr v-for="(row, rowIndex) in display" :key="row.page.key" class="border-b border-border">
-        <td class="py-3 pr-4 text-right text-xs tabular-nums text-muted">{{ rowIndex + 1 }}</td>
+      <tr v-for="row in display" :key="row.page.key" class="border-b border-border">
         <td class="py-3 capitalize" :class="{ 'pl-6 text-muted': row.depth === 1 }">
           <span v-if="row.depth === 1" aria-hidden="true" class="mr-1.5">↳</span>{{ row.page.key }}
         </td>
@@ -187,6 +189,7 @@ async function move(page: PageSetting, siblings: PageSetting[], direction: -1 | 
             {{ row.page.enabled ? 'Shown' : 'Hidden' }}
           </button>
         </td>
+        <td class="py-3 pr-4 text-xs text-muted">{{ formatDateTime(row.page.updatedAt) || '—' }}</td>
         <td class="py-3">
           <button
             type="button"

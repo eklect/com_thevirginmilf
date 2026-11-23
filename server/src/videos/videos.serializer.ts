@@ -27,4 +27,6 @@ export const toAdminVideoView = (row: VideoEntity) => ({
   isHidden: row.isHidden,
   goneAt: row.goneAt,
   viewCount: row.viewCount,
+  createdAt: row.createdAt,
+  updatedAt: row.updatedAt,
 });

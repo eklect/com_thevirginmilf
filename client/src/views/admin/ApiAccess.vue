@@ -3,6 +3,7 @@ import { Check, Copy, Plus } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 import { errorMessage } from '@/api/client';
 import { adminApiClients, type ApiClient } from '@/api/api-clients';
+import { formatDateTime } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -120,6 +121,7 @@ const sort = useSortableTable(
     scopes: (row: ApiClient) => row.scopes.join(', '),
     lastUsed: (row: ApiClient) => row.lastUsedAt,
     status: (row: ApiClient) => row.revokedAt ? 1 : 0,
+    created: (row: ApiClient) => row.createdAt,
   },
   { storageKey: 'admin-api-access' },
 );
@@ -155,7 +157,6 @@ const sort = useSortableTable(
   <Table class="mt-7">
     <TableHeader>
       <TableRow>
-        <TableHead class="kicker w-10 pr-4 text-right">#</TableHead>
         <TableHead class="kicker" :aria-sort="sort.ariaSort('name')">
           <SortButton :table="sort" column="name">Name</SortButton>
         </TableHead>
@@ -171,15 +172,16 @@ const sort = useSortableTable(
         <TableHead class="kicker w-32" :aria-sort="sort.ariaSort('status')">
           <SortButton :table="sort" column="status">Status</SortButton>
         </TableHead>
+        <TableHead class="kicker w-40" :aria-sort="sort.ariaSort('created')">
+          <SortButton :table="sort" column="created">Created</SortButton>
+        </TableHead>
         <TableHead class="w-24" />
       </TableRow>
     </TableHeader>
     <TableBody>
-      <TableRow v-for="(item, rowIndex) in sort.sorted.value" :key="item.id" :class="item.revokedAt ? 'opacity-60' : ''">
-        <TableCell class="text-right text-xs tabular-nums text-muted">{{ rowIndex + 1 }}</TableCell>
+      <TableRow v-for="item in sort.sorted.value" :key="item.id" :class="item.revokedAt ? 'opacity-60' : ''">
         <TableCell class="whitespace-normal">
           {{ item.name }}
-          <span class="block text-xs text-muted">Created {{ when(item.createdAt) }}</span>
         </TableCell>
         <TableCell>
           <code class="text-xs">{{ item.clientId }}</code>
@@ -191,6 +193,7 @@ const sort = useSortableTable(
           <span v-if="item.revokedAt" class="text-danger">Revoked {{ when(item.revokedAt) }}</span>
           <span v-else>Active</span>
         </TableCell>
+        <TableCell class="text-xs">{{ formatDateTime(item.createdAt) || '—' }}</TableCell>
         <TableCell class="text-right">
           <Button
             v-if="!item.revokedAt"

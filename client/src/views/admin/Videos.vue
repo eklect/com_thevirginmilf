@@ -201,6 +201,8 @@ const sort = useSortableTable(
   {
     title: (row: AdminVideo) => row.titleOverride || row.sourceTitle,
     source: (row: AdminVideo) => SOURCE_LABELS[row.source],
+    created: (row: AdminVideo) => row.createdAt,
+    updated: (row: AdminVideo) => row.updatedAt,
   },
   { storageKey: 'admin-videos' },
 );
@@ -445,10 +447,9 @@ const sort = useSortableTable(
   </div>
 
   <div class="overflow-x-auto">
-    <table v-if="shown.length" class="mt-4 w-full min-w-[760px] text-sm">
+    <table v-if="shown.length" class="mt-4 w-full min-w-[1080px] text-sm">
       <thead>
         <tr class="border-b border-border text-left">
-          <th class="kicker py-2.5 w-10 pr-4 text-right">#</th>
           <th class="kicker w-32 py-2.5"></th>
           <th class="kicker py-2.5" :aria-sort="sort.ariaSort('title')">
             <SortButton :table="sort" column="title">Title</SortButton>
@@ -456,12 +457,17 @@ const sort = useSortableTable(
           <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('source')">
             <SortButton :table="sort" column="source">From</SortButton>
           </th>
+          <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('created')">
+            <SortButton :table="sort" column="created">Created</SortButton>
+          </th>
+          <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('updated')">
+            <SortButton :table="sort" column="updated">Updated</SortButton>
+          </th>
           <th class="kicker w-36 py-2.5"></th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(video, rowIndex) in sort.sorted.value" :key="video.id" class="border-b border-border align-top">
-          <td class="py-3 pr-4 text-right text-xs tabular-nums text-muted">{{ rowIndex + 1 }}</td>
+        <tr v-for="video in sort.sorted.value" :key="video.id" class="border-b border-border align-top">
           <td class="py-3 pr-4">
             <img v-if="video.thumbnailUrl" :src="video.thumbnailUrl" alt="" loading="lazy" referrerpolicy="no-referrer" class="aspect-video w-28 object-cover" />
             <div v-else class="aspect-video w-28 bg-surface-alt"></div>
@@ -485,7 +491,9 @@ const sort = useSortableTable(
               <RouterLink :to="{ path: '/live', query: { video: video.id } }">play on the site</RouterLink>
             </span>
           </td>
-          <td class="py-3 text-xs text-muted">{{ SOURCE_LABELS[video.source] }}</td>
+          <td class="py-3 pr-4 text-xs text-muted">{{ SOURCE_LABELS[video.source] }}</td>
+          <td class="py-3 pr-4 text-xs text-muted">{{ formatDateTime(video.createdAt) || '—' }}</td>
+          <td class="py-3 pr-4 text-xs text-muted">{{ formatDateTime(video.updatedAt) || '—' }}</td>
           <td class="py-3 text-right">
             <div class="flex flex-col items-end gap-1.5">
               <button type="button" class="kicker hover:text-text" @click="update(video, { isPinned: !video.isPinned })">

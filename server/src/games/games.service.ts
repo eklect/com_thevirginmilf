@@ -59,6 +59,8 @@ export interface AdminGame extends GameDetail {
   };
   categoryIds: string[];
   reviewCount: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface AdminScreenshot extends GameScreenshot {
@@ -455,6 +457,8 @@ function toAdminGame(game: GameEntity, categoryIds: string[], reviewCount: numbe
     },
     categoryIds,
     reviewCount,
+    createdAt: game.createdAt,
+    updatedAt: game.updatedAt,
   };
 }
 

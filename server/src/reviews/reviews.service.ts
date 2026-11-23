@@ -12,6 +12,7 @@ export interface ReviewSummary {
   title: string;
   isPublished: boolean;
   publishedAt: Date | null;
+  createdAt: Date;
   updatedAt: Date;
   game: { id: string; slug: string; title: string; coverUrl: string | null; rating: number | null };
 }
@@ -109,6 +110,7 @@ function summarize(row: ReviewEntity, game: GameEntity): ReviewSummary {
     title: row.title,
     isPublished: row.isPublished,
     publishedAt: row.publishedAt,
+    createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     game: {
       id: game.id,

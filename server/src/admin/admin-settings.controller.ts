@@ -69,7 +69,7 @@ export class AdminSettingsController {
 
   @Get('pages')
   async getPages() {
-    return { pages: await this.settings.pageSettings() };
+    return { pages: await this.settings.pageSettings(true) };
   }
 
   @Put('pages/:key')

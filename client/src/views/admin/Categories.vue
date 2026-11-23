@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
-import type { AdminCategory } from '../../api/types';
+import { formatDateTime, type AdminCategory } from '../../api/types';
 import ConfirmButton from './ConfirmButton.vue';
 import { useCollection } from './useCollection';
 import { useSaveNotice } from './useSaveNotice';
@@ -20,6 +20,8 @@ const sort = useSortableTable(
   {
     name: (row: AdminCategory) => row.name,
     published: (row: AdminCategory) => row.isPublished,
+    created: (row: AdminCategory) => row.createdAt,
+    updated: (row: AdminCategory) => row.updatedAt,
   },
   { storageKey: 'admin-categories' },
 );
@@ -43,12 +45,17 @@ const sort = useSortableTable(
   <table class="mt-7 w-full text-sm">
     <thead>
       <tr class="border-y border-border text-left">
-        <th class="kicker py-2.5 w-10 pr-4 text-right">#</th>
         <th class="kicker py-2.5" :aria-sort="sort.ariaSort('name')">
           <SortButton :table="sort" column="name">Category</SortButton>
         </th>
         <th class="kicker w-28 py-2.5" :aria-sort="sort.ariaSort('published')">
           <SortButton :table="sort" column="published">Published</SortButton>
+        </th>
+        <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('created')">
+          <SortButton :table="sort" column="created">Created</SortButton>
+        </th>
+        <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('updated')">
+          <SortButton :table="sort" column="updated">Updated</SortButton>
         </th>
         <th class="kicker w-24 py-2.5">Order</th>
         <th class="kicker w-32 py-2.5"></th>
@@ -56,7 +63,6 @@ const sort = useSortableTable(
     </thead>
     <tbody>
       <tr v-for="(item, i) in sort.sorted.value" :key="item.id" class="border-b border-border align-top">
-        <td class="py-3 pr-4 text-right text-xs tabular-nums text-muted">{{ i + 1 }}</td>
         <td class="py-3 pr-4">
           <RouterLink :to="`/admin/categories/${item.id}`" class="font-semibold no-underline hover:underline">
             {{ item.name }}
@@ -73,6 +79,8 @@ const sort = useSortableTable(
             {{ item.isPublished ? 'Live' : 'Hidden' }}
           </button>
         </td>
+        <td class="py-3 pr-4 text-xs text-muted">{{ formatDateTime(item.createdAt) || '—' }}</td>
+        <td class="py-3 pr-4 text-xs text-muted">{{ formatDateTime(item.updatedAt) || '—' }}</td>
         <td class="py-3">
           <button type="button" class="kicker px-1 hover:text-text" :disabled="sort.isSorted.value || i === 0" aria-label="Move up" @click="collection.move(item.id, -1)">↑</button>
           <button type="button" class="kicker px-1 hover:text-text" :disabled="sort.isSorted.value || i === collection.items.value.length - 1" aria-label="Move down" @click="collection.move(item.id, 1)">↓</button>

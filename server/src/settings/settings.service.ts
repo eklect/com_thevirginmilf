@@ -22,6 +22,8 @@ export interface PageSetting {
   parentKey: PageKey | null;
   /** Position among its siblings — within one parent, not across the nav. */
   sortOrder: number;
+  /** Admin plane only; the public bootstrap leaves it out. `page_settings` has no `created_at`. */
+  updatedAt?: Date;
 }
 
 @Injectable()
@@ -71,7 +73,8 @@ export class SettingsService {
 
   // ---------- page toggles ----------
 
-  async pageSettings(): Promise<PageSetting[]> {
+  /** `admin` adds each row's `updatedAt`, which the public bootstrap does not carry. */
+  async pageSettings(admin = false): Promise<PageSetting[]> {
     const rows = await this.pages.find({ order: { sortOrder: 'ASC' } });
     const known = new Set(rows.filter((row) => isPageKey(row.key)).map((row) => row.key));
     return rows
@@ -86,6 +89,7 @@ export class SettingsService {
         parentKey:
           row.parentKey && known.has(row.parentKey) ? (row.parentKey as PageKey) : null,
         sortOrder: row.sortOrder,
+        ...(admin ? { updatedAt: row.updatedAt } : {}),
       }));
   }
 
@@ -133,7 +137,7 @@ export class SettingsService {
     }
 
     await this.pages.save(row);
-    return this.pageSettings();
+    return this.pageSettings(true);
   }
 
   /**

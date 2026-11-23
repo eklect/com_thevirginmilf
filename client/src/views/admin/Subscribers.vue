@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { api, errorMessage } from '../../api/client';
-import { formatDate, type SubscriberRow } from '../../api/types';
+import { formatDateTime, type SubscriberRow } from '../../api/types';
 import SortButton from '@/components/table/SortButton.vue';
 import { useSortableTable } from '@/composables/useSortableTable';
 
@@ -38,7 +38,8 @@ const sort = useSortableTable(
   {
     email: (row: SubscriberRow) => row.email,
     alerts: (row: SubscriberRow) => row.suppressedAt ? 0 : row.isSubscribed ? 2 : 1,
-    joined: (row: SubscriberRow) => row.createdAt,
+    created: (row: SubscriberRow) => row.createdAt,
+    updated: (row: SubscriberRow) => row.updatedAt,
   },
   { storageKey: 'admin-subscribers' },
 );
@@ -100,28 +101,30 @@ const sort = useSortableTable(
     <table class="mt-10 w-full text-sm">
       <thead>
         <tr class="border-y border-border text-left">
-          <th class="kicker py-2.5 w-10 pr-4 text-right">#</th>
           <th class="kicker py-2.5" :aria-sort="sort.ariaSort('email')">
             <SortButton :table="sort" column="email">Email</SortButton>
           </th>
           <th class="kicker w-32 py-2.5" :aria-sort="sort.ariaSort('alerts')">
             <SortButton :table="sort" column="alerts">Email alerts</SortButton>
           </th>
-          <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('joined')">
-            <SortButton :table="sort" column="joined">Joined</SortButton>
+          <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('created')">
+            <SortButton :table="sort" column="created">Created</SortButton>
+          </th>
+          <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('updated')">
+            <SortButton :table="sort" column="updated">Updated</SortButton>
           </th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(row, rowIndex) in sort.sorted.value" :key="row.id" class="border-b border-border">
-          <td class="py-3 pr-4 text-right text-xs tabular-nums text-muted">{{ rowIndex + 1 }}</td>
+        <tr v-for="row in sort.sorted.value" :key="row.id" class="border-b border-border">
           <td class="py-3">{{ row.email }}</td>
           <td class="py-3">
             <span v-if="row.suppressedAt" class="kicker !text-danger">Bouncing</span>
             <span v-else-if="row.isSubscribed" class="kicker !text-text">On</span>
             <span v-else class="kicker">Off</span>
           </td>
-          <td class="py-3 text-muted">{{ formatDate(row.createdAt) }}</td>
+          <td class="py-3 pr-4 text-xs text-muted">{{ formatDateTime(row.createdAt) || '—' }}</td>
+          <td class="py-3 text-xs text-muted">{{ formatDateTime(row.updatedAt) || '—' }}</td>
         </tr>
       </tbody>
     </table>

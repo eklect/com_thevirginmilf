@@ -86,6 +86,8 @@ export interface PageSetting {
   navLabel: string;
   parentKey: PageKey | null;
   sortOrder: number;
+  /** Admin list only; the public bootstrap leaves it out. */
+  updatedAt?: string;
 }
 
 export interface NavNode {
@@ -139,6 +141,8 @@ export interface Channel {
 export interface AdminChannel extends Channel {
   sortOrder: number;
   isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Bootstrap {
@@ -178,6 +182,8 @@ export interface AdminStream extends Stream {
   announcedAt: string | null;
   remindedStartAt: string | null;
   channelLinks: { channelId: string; urlOverride: string | null }[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ---------- games — `server/src/games/games.serializer.ts` ----------
@@ -229,6 +235,7 @@ export interface ReviewSummary {
   title: string;
   isPublished: boolean;
   publishedAt: string | null;
+  createdAt: string;
   updatedAt: string;
   game: { id: string; slug: string; title: string; coverUrl: string | null; rating: number | null };
 }
@@ -247,6 +254,8 @@ export interface AdminCategory {
   description: string | null;
   sortOrder: number;
   isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** `server/src/games/games.service.ts` — `AdminGame`. */
@@ -277,6 +286,8 @@ export interface AdminGame extends GameDetail {
   };
   categoryIds: string[];
   reviewCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ---------- steam — `server/src/steam/steam.service.ts` ----------
@@ -348,6 +359,8 @@ export interface AdminVideo extends Video {
   isHidden: boolean;
   goneAt: string | null;
   viewCount: number | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface VideoPage {
@@ -414,6 +427,7 @@ export interface SubscriberRow {
   isSubscribed: boolean;
   suppressedAt: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 // ---------- helpers ----------

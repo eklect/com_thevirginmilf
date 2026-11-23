@@ -84,6 +84,8 @@ const streamColumns = {
   startsAt: (row: AdminStream) => row.startsAt,
   alerts: (row: AdminStream) => alertRank(row),
   published: (row: AdminStream) => row.isPublished,
+  created: (row: AdminStream) => row.createdAt,
+  updated: (row: AdminStream) => row.updatedAt,
 };
 const upcomingSort = useSortableTable(() => upcoming.value, streamColumns, { storageKey: 'admin-streams-upcoming' });
 const pastSort = useSortableTable(() => past.value, streamColumns, { storageKey: 'admin-streams-past' });
@@ -112,10 +114,9 @@ const { notice } = useSaveNotice();
     <template v-if="group.rows.length">
       <h2 class="kicker masthead-rule mt-9 pt-4">{{ group.title }}</h2>
       <div class="overflow-x-auto">
-        <table class="mt-3 w-full min-w-[640px] text-sm">
+        <table class="mt-3 w-full min-w-[960px] text-sm">
           <thead>
             <tr class="border-b border-border text-left">
-              <th class="kicker w-10 py-2.5 pr-4 text-right">#</th>
               <th class="kicker py-2.5" :aria-sort="group.sort.ariaSort('title')">
                 <SortButton :table="group.sort" column="title">Stream</SortButton>
               </th>
@@ -128,12 +129,17 @@ const { notice } = useSaveNotice();
               <th class="kicker w-28 py-2.5" :aria-sort="group.sort.ariaSort('published')">
                 <SortButton :table="group.sort" column="published">Calendar</SortButton>
               </th>
+              <th class="kicker w-40 py-2.5" :aria-sort="group.sort.ariaSort('created')">
+                <SortButton :table="group.sort" column="created">Created</SortButton>
+              </th>
+              <th class="kicker w-40 py-2.5" :aria-sort="group.sort.ariaSort('updated')">
+                <SortButton :table="group.sort" column="updated">Updated</SortButton>
+              </th>
               <th class="kicker w-32 py-2.5"></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(stream, rowIndex) in group.sort.sorted.value" :key="stream.id" class="border-b border-border align-top">
-              <td class="py-3 pr-4 text-right text-xs tabular-nums text-muted">{{ rowIndex + 1 }}</td>
+            <tr v-for="stream in group.sort.sorted.value" :key="stream.id" class="border-b border-border align-top">
               <td class="py-3 pr-4">
                 <RouterLink :to="`/admin/streams/${stream.id}`" class="font-semibold no-underline hover:underline">
                   {{ stream.title }}
@@ -152,6 +158,8 @@ const { notice } = useSaveNotice();
                   {{ stream.isPublished ? 'Published' : 'Draft' }}
                 </button>
               </td>
+              <td class="py-3 pr-4 text-xs text-muted">{{ formatDateTime(stream.createdAt) || '—' }}</td>
+              <td class="py-3 pr-4 text-xs text-muted">{{ formatDateTime(stream.updatedAt) || '—' }}</td>
               <td class="py-3 text-right">
                 <ConfirmButton :disabled="busy" @confirm="remove(stream)" />
               </td>

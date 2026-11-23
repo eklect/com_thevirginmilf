@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { api, errorMessage } from '../../api/client';
-import { formatDate, type ReviewSummary } from '../../api/types';
+import { formatDate, formatDateTime, type ReviewSummary } from '../../api/types';
 import { useSaveNotice } from './useSaveNotice';
 import SortButton from '@/components/table/SortButton.vue';
 import { useSortableTable } from '@/composables/useSortableTable';
@@ -31,6 +31,8 @@ const sort = useSortableTable(
     title: (row: ReviewSummary) => row.title,
     game: (row: ReviewSummary) => row.game.title,
     status: (row: ReviewSummary) => (row.isPublished && row.publishedAt ? Date.parse(row.publishedAt) : 0),
+    created: (row: ReviewSummary) => row.createdAt,
+    updated: (row: ReviewSummary) => row.updatedAt,
   },
   { storageKey: 'admin-reviews' },
 );
@@ -49,7 +51,6 @@ const sort = useSortableTable(
   <table v-if="reviews.length" class="mt-7 w-full text-sm">
     <thead>
       <tr class="border-y border-border text-left">
-        <th class="kicker py-2.5 w-10 pr-4 text-right">#</th>
         <th class="kicker py-2.5" :aria-sort="sort.ariaSort('title')">
           <SortButton :table="sort" column="title">Review</SortButton>
         </th>
@@ -59,11 +60,16 @@ const sort = useSortableTable(
         <th class="kicker w-44 py-2.5" :aria-sort="sort.ariaSort('status')">
           <SortButton :table="sort" column="status">Status</SortButton>
         </th>
+        <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('created')">
+          <SortButton :table="sort" column="created">Created</SortButton>
+        </th>
+        <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('updated')">
+          <SortButton :table="sort" column="updated">Updated</SortButton>
+        </th>
       </tr>
     </thead>
     <tbody>
-      <tr v-for="(review, rowIndex) in sort.sorted.value" :key="review.id" class="border-b border-border align-top">
-        <td class="py-3 pr-4 text-right text-xs tabular-nums text-muted">{{ rowIndex + 1 }}</td>
+      <tr v-for="review in sort.sorted.value" :key="review.id" class="border-b border-border align-top">
         <td class="py-3 pr-4">
           <RouterLink :to="`/admin/reviews/${review.id}`" class="font-semibold no-underline hover:underline">
             {{ review.title }}
@@ -79,6 +85,8 @@ const sort = useSortableTable(
             {{ review.isPublished ? `Published ${formatDate(review.publishedAt)}` : 'Draft' }}
           </span>
         </td>
+        <td class="py-3 pr-4 text-xs text-muted">{{ formatDateTime(review.createdAt) || '—' }}</td>
+        <td class="py-3 text-xs text-muted">{{ formatDateTime(review.updatedAt) || '—' }}</td>
       </tr>
     </tbody>
   </table>

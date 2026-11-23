@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue';
 import { RouterLink } from 'vue-router';
-import { PLATFORM_LABELS, type AdminChannel } from '../../api/types';
+import { PLATFORM_LABELS, formatDateTime, type AdminChannel } from '../../api/types';
 import { useSiteStore } from '../../stores/site';
 import ConfirmButton from './ConfirmButton.vue';
 import { useCollection } from './useCollection';
@@ -39,6 +39,8 @@ const sort = useSortableTable(
     platform: (row: AdminChannel) => PLATFORM_LABELS[row.platform],
     usedFor: (row: AdminChannel) => [row.isStreamChannel ? 'Streams' : null, row.showOnLinks ? 'Links page' : null].filter(Boolean).join(' · '),
     published: (row: AdminChannel) => row.isPublished,
+    created: (row: AdminChannel) => row.createdAt,
+    updated: (row: AdminChannel) => row.updatedAt,
   },
   { storageKey: 'admin-channels' },
 );
@@ -59,10 +61,9 @@ const sort = useSortableTable(
 
   <SortedNotice :table="sort" />
   <div class="overflow-x-auto">
-    <table class="mt-7 w-full min-w-[680px] text-sm">
+    <table class="mt-7 w-full min-w-[960px] text-sm">
       <thead>
         <tr class="border-y border-border text-left">
-          <th class="kicker py-2.5 w-10 pr-4 text-right">#</th>
           <th class="kicker py-2.5" :aria-sort="sort.ariaSort('name')">
             <SortButton :table="sort" column="name">Channel</SortButton>
           </th>
@@ -75,13 +76,18 @@ const sort = useSortableTable(
           <th class="kicker w-24 py-2.5" :aria-sort="sort.ariaSort('published')">
             <SortButton :table="sort" column="published">Published</SortButton>
           </th>
+          <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('created')">
+            <SortButton :table="sort" column="created">Created</SortButton>
+          </th>
+          <th class="kicker w-40 py-2.5" :aria-sort="sort.ariaSort('updated')">
+            <SortButton :table="sort" column="updated">Updated</SortButton>
+          </th>
           <th class="kicker w-20 py-2.5">Order</th>
           <th class="kicker w-32 py-2.5"></th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="(item, i) in sort.sorted.value" :key="item.id" class="border-b border-border align-top">
-          <td class="py-3 pr-4 text-right text-xs tabular-nums text-muted">{{ i + 1 }}</td>
           <td class="py-3 pr-4">
             <RouterLink :to="`/admin/channels/${item.id}`" class="font-semibold no-underline hover:underline">
               {{ item.name }}
@@ -105,6 +111,8 @@ const sort = useSortableTable(
               {{ item.isPublished ? 'Live' : 'Hidden' }}
             </button>
           </td>
+          <td class="py-3 pr-4 text-xs text-muted">{{ formatDateTime(item.createdAt) || '—' }}</td>
+          <td class="py-3 pr-4 text-xs text-muted">{{ formatDateTime(item.updatedAt) || '—' }}</td>
           <td class="py-3">
             <button type="button" class="kicker px-1 hover:text-text" :disabled="sort.isSorted.value || i === 0" aria-label="Move up" @click="collection.move(item.id, -1)">↑</button>
             <button type="button" class="kicker px-1 hover:text-text" :disabled="sort.isSorted.value || i === collection.items.value.length - 1" aria-label="Move down" @click="collection.move(item.id, 1)">↓</button>

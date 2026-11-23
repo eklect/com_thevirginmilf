@@ -88,6 +88,8 @@ export interface AdminStreamView extends StreamView {
   announcedAt: Date | null;
   remindedStartAt: Date | null;
   channelLinks: { channelId: string; urlOverride: string | null }[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export function toAdminStreamView(event: StreamEventEntity): AdminStreamView {
@@ -102,5 +104,7 @@ export function toAdminStreamView(event: StreamEventEntity): AdminStreamView {
       channelId: link.channelId,
       urlOverride: link.urlOverride,
     })),
+    createdAt: event.createdAt,
+    updatedAt: event.updatedAt,
   };
 }
