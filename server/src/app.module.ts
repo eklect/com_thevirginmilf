@@ -13,6 +13,7 @@ import { GamesModule } from './games/games.module';
 import { HealthController } from './health.controller';
 import { MailModule } from './mail/mail.module';
 import { MapClientModule } from './map-client/map-client.module';
+import { AddressModule } from './address/address.module';
 import { MapOptoutsModule } from './map-optouts/map-optouts.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PushModule } from './push/push.module';
@@ -50,6 +51,7 @@ import { HelpModule } from './help/help.module';
     AuthModule,
     StorageModule,
     MapClientModule,
+    AddressModule,
     MapOptoutsModule,
     SubscribersModule,
     MailModule,
